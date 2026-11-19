@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracks: vec![
                     Track {
                         id: "kick_drum".to_string(),
-                        instrument: InstrumentConfig {
+                        instrument: InstrumentConfig::Synth {
                             waveform: Waveform::Sine,
                             adsr: Adsr {
                                 attack_sec: 0.002,
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     },
                     Track {
                         id: "chords_pad".to_string(),
-                        instrument: InstrumentConfig {
+                        instrument: InstrumentConfig::Synth {
                             waveform: Waveform::Triangle,
                             adsr: Adsr {
                                 attack_sec: 0.2,

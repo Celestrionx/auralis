@@ -12,7 +12,7 @@ fn test_manifest_roundtrip() {
         sample_rate: Some(48000),
         tracks: vec![Track {
             id: "drum_track".to_string(),
-            instrument: InstrumentConfig {
+            instrument: InstrumentConfig::Synth {
                 waveform: Waveform::Noise,
                 adsr: Adsr::default(),
                 pitch_env: Some(PitchEnvelope {
@@ -41,6 +41,40 @@ fn test_manifest_roundtrip() {
 }
 
 #[test]
+fn test_soundfont_manifest_roundtrip_and_fallback() {
+    let song = Song {
+        tempo: 120.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        tracks: vec![Track {
+            id: "piano_track".to_string(),
+            instrument: InstrumentConfig::SoundFont {
+                soundfont_path: "assets/non_existent.sf2".to_string(),
+                bank: Some(0),
+                preset: Some(0),
+            },
+            fx: vec![FxConfig::Gain { gain_db: -2.0 }],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 60,
+                chord_notes: None,
+                velocity: 0.8,
+            }],
+        }],
+    };
+
+    let serialized = serde_json::to_string(&song).expect("Serialize failed");
+    let deserialized: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(song, deserialized);
+
+    // Compilation with non-existent soundfont should log warning and return silent buffer gracefully without panic
+    let rendered = compile_song(&song);
+    assert_eq!(rendered.channels, 2);
+    assert!(!rendered.samples.is_empty());
+}
+
+#[test]
 fn test_percussion_synthesis() {
     let song = Song {
         tempo: 120.0,
@@ -49,7 +83,7 @@ fn test_percussion_synthesis() {
         tracks: vec![
             Track {
                 id: "kick".to_string(),
-                instrument: InstrumentConfig {
+                instrument: InstrumentConfig::Synth {
                     waveform: Waveform::Sine,
                     adsr: Adsr {
                         attack_sec: 0.002,
@@ -73,7 +107,7 @@ fn test_percussion_synthesis() {
             },
             Track {
                 id: "snare".to_string(),
-                instrument: InstrumentConfig {
+                instrument: InstrumentConfig::Synth {
                     waveform: Waveform::Noise,
                     adsr: Adsr {
                         attack_sec: 0.001,
@@ -113,7 +147,7 @@ fn test_stereo_panning_and_chords() {
         tracks: vec![
             Track {
                 id: "left_chords".to_string(),
-                instrument: InstrumentConfig {
+                instrument: InstrumentConfig::Synth {
                     waveform: Waveform::Triangle,
                     adsr: Adsr {
                         attack_sec: 0.05,
@@ -134,7 +168,7 @@ fn test_stereo_panning_and_chords() {
             },
             Track {
                 id: "right_lead".to_string(),
-                instrument: InstrumentConfig {
+                instrument: InstrumentConfig::Synth {
                     waveform: Waveform::Sine,
                     adsr: Adsr::default(),
                     pitch_env: None,
@@ -155,7 +189,6 @@ fn test_stereo_panning_and_chords() {
     let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
     assert_eq!(telemetry.channels, 2);
     assert!(telemetry.stereo_correlation.is_some());
-    // Since tracks are hard-panned left and right, correlation should be less than 0.99
     assert!(telemetry.stereo_correlation.unwrap() < 0.99);
 
     let tmp_path = std::env::temp_dir().join("auralis_stereo_test.wav");

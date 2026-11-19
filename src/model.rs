@@ -30,12 +30,28 @@ pub struct Track {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct InstrumentConfig {
-    pub waveform: Waveform,
-    #[serde(default)]
-    pub adsr: Adsr,
-    #[serde(default)]
-    pub pitch_env: Option<PitchEnvelope>,
+#[serde(untagged)]
+pub enum InstrumentConfig {
+    SoundFont {
+        soundfont_path: String,
+        #[serde(default)]
+        bank: Option<u32>,
+        #[serde(default)]
+        preset: Option<u32>,
+    },
+    Synth {
+        waveform: Waveform,
+        #[serde(default)]
+        adsr: Adsr,
+        #[serde(default)]
+        pitch_env: Option<PitchEnvelope>,
+    },
+}
+
+impl InstrumentConfig {
+    pub fn is_soundfont(&self) -> bool {
+        matches!(self, InstrumentConfig::SoundFont { .. })
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
