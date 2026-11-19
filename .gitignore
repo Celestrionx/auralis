@@ -1,0 +1,6 @@
+/target
+**/*.rs.bk
+*.wav
+*.mp3
+*.ogg
+.DS_Store
