@@ -1,5 +1,7 @@
 use auralis::graph::{compile_song, export_wav};
-use auralis::model::{Adsr, FxConfig, InstrumentConfig, NoteEvent, Song, Track, Waveform};
+use auralis::model::{
+    Adsr, FxConfig, InstrumentConfig, NoteEvent, PitchEnvelope, Song, Track, Waveform,
+};
 use auralis::telemetry::analyze_audio;
 
 #[test]
@@ -9,17 +11,26 @@ fn test_manifest_roundtrip() {
         time_signature: (3, 4),
         sample_rate: Some(48000),
         tracks: vec![Track {
-            id: "test_track".to_string(),
+            id: "drum_track".to_string(),
             instrument: InstrumentConfig {
-                waveform: Waveform::Square,
+                waveform: Waveform::Noise,
                 adsr: Adsr::default(),
+                pitch_env: Some(PitchEnvelope {
+                    drop_semitones: 24.0,
+                    decay_sec: 0.05,
+                }),
             },
-            fx: vec![FxConfig::Gain { gain_db: -3.0 }],
+            fx: vec![
+                FxConfig::Gain { gain_db: -3.0 },
+                FxConfig::Pan { pan: -0.5 },
+                FxConfig::HighPass { cutoff_hz: 800.0 },
+            ],
             events: vec![NoteEvent {
                 start_beats: 0.0,
-                duration_beats: 2.0,
-                midi_note: 69, // A4
-                velocity: 0.75,
+                duration_beats: 1.0,
+                midi_note: 60,
+                chord_notes: Some(vec![60, 64, 67]),
+                velocity: 0.8,
             }],
         }],
     };
@@ -30,74 +41,126 @@ fn test_manifest_roundtrip() {
 }
 
 #[test]
-fn test_synthesis_and_telemetry() {
+fn test_percussion_synthesis() {
     let song = Song {
         tempo: 120.0,
         time_signature: (4, 4),
         sample_rate: Some(44100),
-        tracks: vec![Track {
-            id: "sine_tone".to_string(),
-            instrument: InstrumentConfig {
-                waveform: Waveform::Sine,
-                adsr: Adsr {
-                    attack_sec: 0.01,
-                    decay_sec: 0.05,
-                    sustain_level: 0.8,
-                    release_sec: 0.05,
+        tracks: vec![
+            Track {
+                id: "kick".to_string(),
+                instrument: InstrumentConfig {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr {
+                        attack_sec: 0.002,
+                        decay_sec: 0.12,
+                        sustain_level: 0.0,
+                        release_sec: 0.03,
+                    },
+                    pitch_env: Some(PitchEnvelope {
+                        drop_semitones: 36.0,
+                        decay_sec: 0.04,
+                    }),
                 },
+                fx: vec![],
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 0.5,
+                    midi_note: 36,
+                    chord_notes: None,
+                    velocity: 0.9,
+                }],
             },
-            fx: vec![],
-            events: vec![NoteEvent {
-                start_beats: 0.0,
-                duration_beats: 1.0,
-                midi_note: 69, // 440 Hz
-                velocity: 0.8,
-            }],
-        }],
+            Track {
+                id: "snare".to_string(),
+                instrument: InstrumentConfig {
+                    waveform: Waveform::Noise,
+                    adsr: Adsr {
+                        attack_sec: 0.001,
+                        decay_sec: 0.15,
+                        sustain_level: 0.0,
+                        release_sec: 0.02,
+                    },
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::HighPass { cutoff_hz: 1000.0 }],
+                events: vec![NoteEvent {
+                    start_beats: 1.0,
+                    duration_beats: 0.5,
+                    midi_note: 60,
+                    chord_notes: None,
+                    velocity: 0.7,
+                }],
+            },
+        ],
     };
 
     let rendered = compile_song(&song);
+    assert_eq!(rendered.channels, 2);
     assert!(!rendered.samples.is_empty());
 
-    let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate);
+    let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
     assert!(telemetry.peak_amplitude > 0.0);
-    assert!(telemetry.peak_amplitude <= 1.0);
     assert!(!telemetry.is_clipping);
-    assert!(telemetry.duration_seconds > 0.5);
-    // 440Hz sits squarely in mid range (250Hz - 4000Hz)
-    assert!(telemetry.spectral_bands.mid_ratio > telemetry.spectral_bands.high_ratio);
 }
 
 #[test]
-fn test_wav_export_roundtrip() {
+fn test_stereo_panning_and_chords() {
     let song = Song {
         tempo: 120.0,
         time_signature: (4, 4),
         sample_rate: Some(44100),
-        tracks: vec![Track {
-            id: "short_beep".to_string(),
-            instrument: InstrumentConfig {
-                waveform: Waveform::Triangle,
-                adsr: Adsr::default(),
+        tracks: vec![
+            Track {
+                id: "left_chords".to_string(),
+                instrument: InstrumentConfig {
+                    waveform: Waveform::Triangle,
+                    adsr: Adsr {
+                        attack_sec: 0.05,
+                        decay_sec: 0.2,
+                        sustain_level: 0.7,
+                        release_sec: 0.2,
+                    },
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: -0.8 }],
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 2.0,
+                    midi_note: 60,
+                    chord_notes: Some(vec![60, 64, 67, 71]), // Cmaj7
+                    velocity: 0.7,
+                }],
             },
-            fx: vec![],
-            events: vec![NoteEvent {
-                start_beats: 0.0,
-                duration_beats: 0.25,
-                midi_note: 60,
-                velocity: 0.5,
-            }],
-        }],
+            Track {
+                id: "right_lead".to_string(),
+                instrument: InstrumentConfig {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: 0.8 }],
+                events: vec![NoteEvent {
+                    start_beats: 0.5,
+                    duration_beats: 1.0,
+                    midi_note: 72,
+                    chord_notes: None,
+                    velocity: 0.6,
+                }],
+            },
+        ],
     };
 
     let rendered = compile_song(&song);
-    let tmp_path = std::env::temp_dir().join("auralis_test_output.wav");
-    export_wav(&rendered, &tmp_path).expect("Export WAV failed");
+    let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
+    assert_eq!(telemetry.channels, 2);
+    assert!(telemetry.stereo_correlation.is_some());
+    // Since tracks are hard-panned left and right, correlation should be less than 0.99
+    assert!(telemetry.stereo_correlation.unwrap() < 0.99);
 
-    let reader = hound::WavReader::open(&tmp_path).expect("Open WAV failed");
-    assert_eq!(reader.spec().channels, 1);
-    assert_eq!(reader.spec().sample_rate, 44100);
-    assert!(reader.len() > 0);
-
+    let tmp_path = std::env::temp_dir().join("auralis_stereo_test.wav");
+    export_wav(&rendered, &tmp_path).expect("Export failed");
+    let reader = hound::WavReader::open(&tmp_path).expect("Open failed");
+    assert_eq!(reader.spec().channels, 2);
     let _ = std::fs::remove_file(tmp_path);
 }

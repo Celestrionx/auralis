@@ -1,5 +1,5 @@
 use crate::model::{FxConfig, Song, Track};
-use crate::synth::{calculate_envelope, generate_sample};
+use crate::synth::{DeterministicNoise, calculate_envelope, generate_sample};
 use hound::{WavSpec, WavWriter};
 use std::f32::consts::PI;
 use std::path::Path;
@@ -7,7 +7,7 @@ use std::path::Path;
 pub struct RenderedAudio {
     pub sample_rate: u32,
     pub channels: u16,
-    pub samples: Vec<f32>,
+    pub samples: Vec<f32>, // interleaved: [L0, R0, L1, R1, ...]
 }
 
 pub fn compile_song(song: &Song) -> RenderedAudio {
@@ -26,19 +26,41 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
     }
 
     let total_samples = ((total_duration_sec + 0.1) * sample_rate as f32).ceil() as usize;
-    let mut master_buffer = vec![0.0_f32; total_samples];
+    let mut master_left = vec![0.0_f32; total_samples];
+    let mut master_right = vec![0.0_f32; total_samples];
 
-    for track in &song.tracks {
-        let track_buffer = render_track(track, sample_rate, sec_per_beat, total_samples);
-        for (m, t) in master_buffer.iter_mut().zip(track_buffer.iter()) {
-            *m += *t;
+    for (t_idx, track) in song.tracks.iter().enumerate() {
+        let (track_mono, pan_val) = render_track(
+            track,
+            sample_rate,
+            sec_per_beat,
+            total_samples,
+            t_idx as u32,
+        );
+
+        // Constant power pan law
+        let pan = pan_val.clamp(-1.0, 1.0);
+        let theta = (pan + 1.0) * (PI / 4.0);
+        let left_gain = theta.cos();
+        let right_gain = theta.sin();
+
+        for i in 0..total_samples {
+            master_left[i] += track_mono[i] * left_gain;
+            master_right[i] += track_mono[i] * right_gain;
         }
+    }
+
+    // Interleave left and right into stereo stream
+    let mut interleaved = Vec::with_capacity(total_samples * 2);
+    for i in 0..total_samples {
+        interleaved.push(master_left[i]);
+        interleaved.push(master_right[i]);
     }
 
     RenderedAudio {
         sample_rate,
-        channels: 1,
-        samples: master_buffer,
+        channels: 2,
+        samples: interleaved,
     }
 }
 
@@ -47,28 +69,54 @@ fn render_track(
     sample_rate: u32,
     sec_per_beat: f32,
     total_samples: usize,
-) -> Vec<f32> {
+    track_seed: u32,
+) -> (Vec<f32>, f32) {
     let mut buffer = vec![0.0_f32; total_samples];
+    let mut noise_gen = DeterministicNoise::new(track_seed + 1);
 
-    for ev in &track.events {
+    for (ev_idx, ev) in track.events.iter().enumerate() {
         let start_sec = ev.start_beats * sec_per_beat;
         let duration_sec = ev.duration_beats * sec_per_beat;
-        let freq = ev.frequency_hz();
+        let notes = ev.notes();
+        let note_count = notes.len().max(1) as f32;
+        // Scale velocity so multi-note chords don't explode track gain
+        let velocity_per_voice = ev.velocity / note_count.sqrt();
 
         let start_sample = (start_sec * sample_rate as f32) as usize;
         let note_total_sec = duration_sec + track.instrument.adsr.release_sec;
         let note_total_samples = (note_total_sec * sample_rate as f32).ceil() as usize;
-
         let end_sample = (start_sample + note_total_samples).min(total_samples);
 
-        for (offset, s) in buffer[start_sample..end_sample].iter_mut().enumerate() {
-            let t = offset as f32 / sample_rate as f32;
-            let phase = 2.0 * PI * freq * t;
-            let raw_sample = generate_sample(track.instrument.waveform, phase);
-            let env = calculate_envelope(t, duration_sec, &track.instrument.adsr);
-            *s += raw_sample * env * ev.velocity;
+        for &midi in &notes {
+            for (offset, s) in buffer[start_sample..end_sample].iter_mut().enumerate() {
+                let t = offset as f32 / sample_rate as f32;
+
+                let pitch_drop = if let Some(penv) = &track.instrument.pitch_env {
+                    if penv.decay_sec > 0.0001 && t <= penv.decay_sec {
+                        let factor = 1.0 - (t / penv.decay_sec);
+                        penv.drop_semitones * factor
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                };
+
+                let effective_midi = (midi as f32 + pitch_drop).clamp(0.0, 127.0);
+                let freq = 440.0 * 2.0_f32.powf((effective_midi - 69.0) / 12.0);
+
+                let phase = 2.0 * PI * freq * t;
+                let raw_sample = generate_sample(track.instrument.waveform, phase, &mut noise_gen);
+                let env = calculate_envelope(t, duration_sec, &track.instrument.adsr);
+                *s += raw_sample * env * velocity_per_voice;
+            }
         }
+
+        // Re-seed noise generator per note event for variety
+        noise_gen = DeterministicNoise::new(track_seed.wrapping_add(ev_idx as u32 * 31 + 7));
     }
+
+    let mut pan_val = 0.0_f32;
 
     // Apply Track FX
     for fx in &track.fx {
@@ -80,7 +128,7 @@ fn render_track(
                 }
             }
             FxConfig::LowPass { cutoff_hz } => {
-                let rc = 1.0 / (2.0 * PI * cutoff_hz);
+                let rc = 1.0 / (2.0 * PI * cutoff_hz.max(10.0));
                 let dt = 1.0 / sample_rate as f32;
                 let alpha = dt / (rc + dt);
                 let mut prev = 0.0_f32;
@@ -89,10 +137,26 @@ fn render_track(
                     prev = *s;
                 }
             }
+            FxConfig::HighPass { cutoff_hz } => {
+                let rc = 1.0 / (2.0 * PI * cutoff_hz.max(10.0));
+                let dt = 1.0 / sample_rate as f32;
+                let alpha = rc / (rc + dt);
+                let mut prev_out = 0.0_f32;
+                let mut prev_in = 0.0_f32;
+                for s in &mut buffer {
+                    let cur_in = *s;
+                    prev_out = alpha * (prev_out + cur_in - prev_in);
+                    prev_in = cur_in;
+                    *s = prev_out;
+                }
+            }
+            FxConfig::Pan { pan } => {
+                pan_val = *pan;
+            }
         }
     }
 
-    buffer
+    (buffer, pan_val)
 }
 
 pub fn export_wav<P: AsRef<Path>>(

@@ -104,8 +104,11 @@ pub fn run_stdio_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
                         match serde_json::from_str::<Song>(manifest_str) {
                             Ok(song) => {
                                 let rendered = compile_song(&song);
-                                let telemetry =
-                                    analyze_audio(&rendered.samples, rendered.sample_rate);
+                                let telemetry = analyze_audio(
+                                    &rendered.samples,
+                                    rendered.sample_rate,
+                                    rendered.channels,
+                                );
                                 match export_wav(&rendered, wav_path) {
                                     Ok(_) => json!({
                                         "content": [
