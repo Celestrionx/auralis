@@ -1,0 +1,128 @@
+{
+  "tempo": 84.0,
+  "time_signature": [4, 4],
+  "sample_rate": 44100,
+  "loop_points": {
+    "start_beat": 16.0,
+    "end_beat": 48.0
+  },
+  "tracks": [
+    {
+      "id": "acoustic_piano",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 0
+      },
+      "fx": [
+        { "type": "gain", "gain_db": -3.0 },
+        { "type": "pan", "pan": -0.25 }
+      ],
+      "events": [
+        { "start_beats": 0.0, "duration_beats": 4.0, "midi_note": 40, "chord_notes": [40, 52, 55, 59, 64], "velocity": 0.75 },
+        { "start_beats": 4.0, "duration_beats": 4.0, "midi_note": 40, "chord_notes": [52, 55, 59, 62], "velocity": 0.7 },
+        { "start_beats": 8.0, "duration_beats": 4.0, "midi_note": 36, "chord_notes": [36, 48, 52, 55, 59], "velocity": 0.75 },
+        { "start_beats": 12.0, "duration_beats": 4.0, "midi_note": 36, "chord_notes": [48, 52, 55, 60], "velocity": 0.7 },
+        { "start_beats": 16.0, "duration_beats": 4.0, "midi_note": 43, "chord_notes": [43, 50, 55, 59, 62], "velocity": 0.75 },
+        { "start_beats": 20.0, "duration_beats": 4.0, "midi_note": 43, "chord_notes": [50, 55, 57, 62], "velocity": 0.7 },
+        { "start_beats": 24.0, "duration_beats": 4.0, "midi_note": 42, "chord_notes": [42, 45, 50, 54, 57], "velocity": 0.75 },
+        { "start_beats": 28.0, "duration_beats": 4.0, "midi_note": 42, "chord_notes": [45, 50, 54, 59], "velocity": 0.7 },
+        { "start_beats": 32.0, "duration_beats": 4.0, "midi_note": 40, "chord_notes": [40, 52, 55, 59, 64], "velocity": 0.75 },
+        { "start_beats": 36.0, "duration_beats": 4.0, "midi_note": 40, "chord_notes": [52, 55, 59, 62], "velocity": 0.7 },
+        { "start_beats": 40.0, "duration_beats": 4.0, "midi_note": 36, "chord_notes": [36, 48, 52, 55, 59], "velocity": 0.75 },
+        { "start_beats": 44.0, "duration_beats": 4.0, "midi_note": 36, "chord_notes": [48, 52, 55, 60], "velocity": 0.7 },
+        { "start_beats": 48.0, "duration_beats": 4.0, "midi_note": 47, "chord_notes": [47, 50, 54, 57, 62], "velocity": 0.75 },
+        { "start_beats": 52.0, "duration_beats": 4.0, "midi_note": 40, "chord_notes": [40, 52, 55, 59, 64], "velocity": 0.8 }
+      ]
+    },
+    {
+      "id": "string_ensemble",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 48
+      },
+      "fx": [
+        { "type": "gain", "gain_db": -5.0 },
+        { "type": "pan", "pan": 0.25 },
+        { "type": "lowpass", "cutoff_hz": 4000.0 }
+      ],
+      "events": [
+        { "start_beats": 8.0, "duration_beats": 8.0, "midi_note": 48, "chord_notes": [48, 55, 59, 64], "velocity": 0.65 },
+        { "start_beats": 16.0, "duration_beats": 8.0, "midi_note": 50, "chord_notes": [50, 55, 59, 62], "velocity": 0.7 },
+        { "start_beats": 24.0, "duration_beats": 8.0, "midi_note": 45, "chord_notes": [45, 54, 57, 62], "velocity": 0.7 },
+        { "start_beats": 32.0, "duration_beats": 8.0, "midi_note": 40, "chord_notes": [40, 52, 55, 64], "velocity": 0.7 },
+        { "start_beats": 40.0, "duration_beats": 8.0, "midi_note": 48, "chord_notes": [48, 55, 59, 64], "velocity": 0.7 },
+        { "start_beats": 48.0, "duration_beats": 8.0, "midi_note": 47, "chord_notes": [47, 54, 59, 62], "velocity": 0.65 }
+      ]
+    },
+    {
+      "id": "solo_violin",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 40
+      },
+      "fx": [
+        { "type": "gain", "gain_db": -4.0 },
+        { "type": "pan", "pan": -0.15 }
+      ],
+      "events": [
+        { "start_beats": 16.0, "duration_beats": 2.0, "midi_note": 71, "velocity": 0.75 },
+        { "start_beats": 18.0, "duration_beats": 2.0, "midi_note": 74, "velocity": 0.8 },
+        { "start_beats": 20.0, "duration_beats": 4.0, "midi_note": 76, "velocity": 0.85 },
+        { "start_beats": 24.0, "duration_beats": 2.0, "midi_note": 78, "velocity": 0.8 },
+        { "start_beats": 26.0, "duration_beats": 2.0, "midi_note": 74, "velocity": 0.75 },
+        { "start_beats": 28.0, "duration_beats": 4.0, "midi_note": 71, "velocity": 0.8 },
+        { "start_beats": 32.0, "duration_beats": 2.0, "midi_note": 76, "velocity": 0.8 },
+        { "start_beats": 34.0, "duration_beats": 2.0, "midi_note": 79, "velocity": 0.85 },
+        { "start_beats": 36.0, "duration_beats": 4.0, "midi_note": 81, "velocity": 0.9 },
+        { "start_beats": 40.0, "duration_beats": 3.0, "midi_note": 79, "velocity": 0.85 },
+        { "start_beats": 43.0, "duration_beats": 1.0, "midi_note": 78, "velocity": 0.8 },
+        { "start_beats": 44.0, "duration_beats": 4.0, "midi_note": 76, "velocity": 0.85 },
+        { "start_beats": 48.0, "duration_beats": 4.0, "midi_note": 74, "velocity": 0.75 },
+        { "start_beats": 52.0, "duration_beats": 4.0, "midi_note": 71, "velocity": 0.7 }
+      ]
+    },
+    {
+      "id": "acoustic_bass",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 32
+      },
+      "fx": [
+        { "type": "gain", "gain_db": -3.5 },
+        { "type": "pan", "pan": 0.0 }
+      ],
+      "events": [
+        { "start_beats": 0.0, "duration_beats": 7.5, "midi_note": 28, "velocity": 0.8 },
+        { "start_beats": 8.0, "duration_beats": 7.5, "midi_note": 24, "velocity": 0.8 },
+        { "start_beats": 16.0, "duration_beats": 7.5, "midi_note": 31, "velocity": 0.8 },
+        { "start_beats": 24.0, "duration_beats": 7.5, "midi_note": 30, "velocity": 0.8 },
+        { "start_beats": 32.0, "duration_beats": 7.5, "midi_note": 28, "velocity": 0.8 },
+        { "start_beats": 40.0, "duration_beats": 7.5, "midi_note": 24, "velocity": 0.8 },
+        { "start_beats": 48.0, "duration_beats": 7.5, "midi_note": 35, "velocity": 0.8 }
+      ]
+    },
+    {
+      "id": "orchestral_flute",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 73
+      },
+      "fx": [
+        { "type": "gain", "gain_db": -6.0 },
+        { "type": "pan", "pan": 0.35 },
+        { "type": "highpass", "cutoff_hz": 600.0 }
+      ],
+      "events": [
+        { "start_beats": 28.0, "duration_beats": 1.5, "midi_note": 83, "velocity": 0.7 },
+        { "start_beats": 29.5, "duration_beats": 2.5, "midi_note": 86, "velocity": 0.75 },
+        { "start_beats": 44.0, "duration_beats": 1.5, "midi_note": 83, "velocity": 0.7 },
+        { "start_beats": 45.5, "duration_beats": 2.5, "midi_note": 88, "velocity": 0.75 }
+      ]
+    }
+  ]
+}

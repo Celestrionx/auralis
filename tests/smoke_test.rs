@@ -79,6 +79,50 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
 }
 
 #[test]
+fn test_real_soundfont_synthesis() {
+    let sf2_path = "assets/soundfonts/TimGM6mb.sf2";
+    if !std::path::Path::new(sf2_path).exists() {
+        return;
+    }
+
+    let song = Song {
+        tempo: 100.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        loop_points: None,
+        tracks: vec![Track {
+            id: "grand_piano".to_string(),
+            instrument: InstrumentConfig::SoundFont {
+                soundfont_path: sf2_path.to_string(),
+                bank: Some(0),
+                preset: Some(0), // Acoustic Grand Piano
+            },
+            fx: vec![FxConfig::Gain { gain_db: -3.0 }],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 2.0,
+                midi_note: 60,
+                chord_notes: Some(vec![60, 64, 67]), // C Major triad
+                velocity: 0.8,
+            }],
+        }],
+    };
+
+    let rendered = compile_song(&song);
+    assert_eq!(rendered.channels, 2);
+    assert!(!rendered.samples.is_empty());
+
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        rendered.loop_samples,
+    );
+    assert!(telemetry.peak_amplitude > 0.01);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
 fn test_percussion_synthesis() {
     let song = Song {
         tempo: 120.0,
