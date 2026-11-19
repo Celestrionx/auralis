@@ -2,6 +2,10 @@
   "tempo": 110.0,
   "time_signature": [4, 4],
   "sample_rate": 44100,
+  "loop_points": {
+    "start_beat": 16.0,
+    "end_beat": 48.0
+  },
   "tracks": [
     {
       "id": "kick",

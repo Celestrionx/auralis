@@ -6,6 +6,8 @@ pub struct Song {
     pub time_signature: (u8, u8),
     #[serde(default)]
     pub sample_rate: Option<u32>,
+    #[serde(default)]
+    pub loop_points: Option<LoopPoints>,
     pub tracks: Vec<Track>,
 }
 
@@ -15,9 +17,17 @@ impl Default for Song {
             tempo: 120.0,
             time_signature: (4, 4),
             sample_rate: Some(44100),
+            loop_points: None,
             tracks: Vec::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+pub struct LoopPoints {
+    pub start_beat: f32,
+    #[serde(default)]
+    pub end_beat: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

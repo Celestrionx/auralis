@@ -1,6 +1,8 @@
-use auralis::graph::{compile_song, export_wav};
+use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
 use auralis::mcp::run_stdio_mcp_server;
-use auralis::model::{Adsr, InstrumentConfig, NoteEvent, PitchEnvelope, Song, Track, Waveform};
+use auralis::model::{
+    Adsr, InstrumentConfig, LoopPoints, NoteEvent, PitchEnvelope, Song, Track, Waveform,
+};
 use auralis::telemetry::analyze_audio;
 use clap::{Parser, Subcommand};
 use std::fs;
@@ -47,6 +49,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tempo: 120.0,
                 time_signature: (4, 4),
                 sample_rate: Some(44100),
+                loop_points: Some(LoopPoints {
+                    start_beat: 0.0,
+                    end_beat: Some(4.0),
+                }),
                 tracks: vec![
                     Track {
                         id: "kick_drum".to_string(),
@@ -123,8 +129,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let song: Song = serde_json::from_str(&content)?;
             let rendered = compile_song(&song);
             export_wav(&rendered, &output)?;
-            let telemetry =
-                analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
+            let telemetry = analyze_audio(
+                &rendered.samples,
+                rendered.sample_rate,
+                rendered.channels,
+                rendered.loop_samples,
+            );
             println!("Compiled audio to {}", output.display());
             println!(
                 "Auditory Telemetry:\n{}",
@@ -139,7 +149,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .filter_map(Result::ok)
                 .map(|s| s as f32 / i16::MAX as f32)
                 .collect();
-            let telemetry = analyze_audio(&samples, spec.sample_rate, spec.channels);
+            let loop_samples = read_wav_loop_points(&path);
+            let telemetry = analyze_audio(&samples, spec.sample_rate, spec.channels, loop_samples);
             println!("{}", serde_json::to_string_pretty(&telemetry)?);
         }
         Commands::Serve => {

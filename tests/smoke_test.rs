@@ -1,6 +1,6 @@
-use auralis::graph::{compile_song, export_wav};
+use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
 use auralis::model::{
-    Adsr, FxConfig, InstrumentConfig, NoteEvent, PitchEnvelope, Song, Track, Waveform,
+    Adsr, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, PitchEnvelope, Song, Track, Waveform,
 };
 use auralis::telemetry::analyze_audio;
 
@@ -10,6 +10,10 @@ fn test_manifest_roundtrip() {
         tempo: 140.0,
         time_signature: (3, 4),
         sample_rate: Some(48000),
+        loop_points: Some(LoopPoints {
+            start_beat: 1.0,
+            end_beat: Some(7.0),
+        }),
         tracks: vec![Track {
             id: "drum_track".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -46,6 +50,7 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
         tempo: 120.0,
         time_signature: (4, 4),
         sample_rate: Some(44100),
+        loop_points: None,
         tracks: vec![Track {
             id: "piano_track".to_string(),
             instrument: InstrumentConfig::SoundFont {
@@ -68,7 +73,6 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
     let deserialized: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
     assert_eq!(song, deserialized);
 
-    // Compilation with non-existent soundfont should log warning and return silent buffer gracefully without panic
     let rendered = compile_song(&song);
     assert_eq!(rendered.channels, 2);
     assert!(!rendered.samples.is_empty());
@@ -80,6 +84,7 @@ fn test_percussion_synthesis() {
         tempo: 120.0,
         time_signature: (4, 4),
         sample_rate: Some(44100),
+        loop_points: None,
         tracks: vec![
             Track {
                 id: "kick".to_string(),
@@ -133,7 +138,12 @@ fn test_percussion_synthesis() {
     assert_eq!(rendered.channels, 2);
     assert!(!rendered.samples.is_empty());
 
-    let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        rendered.loop_samples,
+    );
     assert!(telemetry.peak_amplitude > 0.0);
     assert!(!telemetry.is_clipping);
 }
@@ -144,6 +154,7 @@ fn test_stereo_panning_and_chords() {
         tempo: 120.0,
         time_signature: (4, 4),
         sample_rate: Some(44100),
+        loop_points: None,
         tracks: vec![
             Track {
                 id: "left_chords".to_string(),
@@ -186,7 +197,12 @@ fn test_stereo_panning_and_chords() {
     };
 
     let rendered = compile_song(&song);
-    let telemetry = analyze_audio(&rendered.samples, rendered.sample_rate, rendered.channels);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        rendered.loop_samples,
+    );
     assert_eq!(telemetry.channels, 2);
     assert!(telemetry.stereo_correlation.is_some());
     assert!(telemetry.stereo_correlation.unwrap() < 0.99);
@@ -195,5 +211,60 @@ fn test_stereo_panning_and_chords() {
     export_wav(&rendered, &tmp_path).expect("Export failed");
     let reader = hound::WavReader::open(&tmp_path).expect("Open failed");
     assert_eq!(reader.spec().channels, 2);
+    let _ = std::fs::remove_file(tmp_path);
+}
+
+#[test]
+fn test_seamless_loop_metadata_export_and_read() {
+    let song = Song {
+        tempo: 120.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        loop_points: Some(LoopPoints {
+            start_beat: 4.0,      // 2.0 seconds = 88200 samples
+            end_beat: Some(12.0), // 6.0 seconds = 264600 samples
+        }),
+        tracks: vec![Track {
+            id: "ambient_loop".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr::default(),
+                pitch_env: None,
+            },
+            fx: vec![],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 16.0,
+                midi_note: 60,
+                chord_notes: None,
+                velocity: 0.7,
+            }],
+        }],
+    };
+
+    let rendered = compile_song(&song);
+    assert_eq!(rendered.loop_samples, Some((88200, 264600)));
+
+    let tmp_path = std::env::temp_dir().join("auralis_loop_test.wav");
+    export_wav(&rendered, &tmp_path).expect("Export failed");
+
+    // Verify RIFF 'smpl' chunk reader parses exact loop markers
+    let read_loops = read_wav_loop_points(&tmp_path);
+    assert_eq!(read_loops, Some((88200, 264600)));
+
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        rendered.loop_samples,
+    );
+    assert!(telemetry.loop_telemetry.is_some());
+    let lt = telemetry.loop_telemetry.unwrap();
+    assert_eq!(lt.start_sample, 88200);
+    assert_eq!(lt.end_sample, 264600);
+    assert!((lt.start_seconds - 2.0).abs() < 1e-4);
+    assert!((lt.end_seconds - 6.0).abs() < 1e-4);
+    assert!((lt.loop_duration_seconds - 4.0).abs() < 1e-4);
+
     let _ = std::fs::remove_file(tmp_path);
 }

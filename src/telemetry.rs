@@ -15,6 +15,17 @@ pub struct AudioTelemetry {
     #[serde(default)]
     pub stereo_correlation: Option<f32>,
     pub spectral_bands: SpectralEnergy,
+    #[serde(default)]
+    pub loop_telemetry: Option<LoopTelemetry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LoopTelemetry {
+    pub start_sample: u32,
+    pub end_sample: u32,
+    pub start_seconds: f32,
+    pub end_seconds: f32,
+    pub loop_duration_seconds: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -24,7 +35,12 @@ pub struct SpectralEnergy {
     pub high_ratio: f32,
 }
 
-pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioTelemetry {
+pub fn analyze_audio(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    loop_samples: Option<(u32, u32)>,
+) -> AudioTelemetry {
     let ch = channels.max(1) as usize;
     if samples.is_empty() {
         return AudioTelemetry {
@@ -42,6 +58,7 @@ pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioT
                 mid_ratio: 0.0,
                 high_ratio: 0.0,
             },
+            loop_telemetry: None,
         };
     }
 
@@ -68,7 +85,6 @@ pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioT
         -96.0
     };
 
-    // Calculate stereo correlation if 2 channels
     let stereo_correlation = if ch == 2 && samples.len() >= 4 {
         let mut sum_lr = 0.0_f32;
         let mut sum_l2 = 0.0_f32;
@@ -93,7 +109,6 @@ pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioT
         None
     };
 
-    // Downmix to mono for FFT spectral analysis
     let mono_samples: Vec<f32> = if ch == 2 {
         let (pairs, _) = samples.as_chunks::<2>();
         pairs.iter().map(|c| (c[0] + c[1]) * 0.5).collect()
@@ -104,6 +119,15 @@ pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioT
     let spectral_bands = calculate_spectral_bands(&mono_samples, sample_rate);
 
     let frames = samples.len() / ch;
+
+    let loop_telemetry = loop_samples.map(|(start, end)| LoopTelemetry {
+        start_sample: start,
+        end_sample: end,
+        start_seconds: start as f32 / sample_rate as f32,
+        end_seconds: end as f32 / sample_rate as f32,
+        loop_duration_seconds: (end.saturating_sub(start)) as f32 / sample_rate as f32,
+    });
+
     AudioTelemetry {
         channels,
         sample_count: frames,
@@ -115,6 +139,7 @@ pub fn analyze_audio(samples: &[f32], sample_rate: u32, channels: u16) -> AudioT
         is_clipping: peak >= 0.999,
         stereo_correlation,
         spectral_bands,
+        loop_telemetry,
     }
 }
 

@@ -108,6 +108,7 @@ pub fn run_stdio_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
                                     &rendered.samples,
                                     rendered.sample_rate,
                                     rendered.channels,
+                                    rendered.loop_samples,
                                 );
                                 match export_wav(&rendered, wav_path) {
                                     Ok(_) => json!({

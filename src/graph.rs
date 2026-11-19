@@ -3,12 +3,15 @@ use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_sample};
 use hound::{WavSpec, WavWriter};
 use std::f32::consts::PI;
+use std::fs::OpenOptions;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 pub struct RenderedAudio {
     pub sample_rate: u32,
     pub channels: u16,
     pub samples: Vec<f32>, // interleaved: [L0, R0, L1, R1, ...]
+    pub loop_samples: Option<(u32, u32)>,
 }
 
 pub fn compile_song(song: &Song) -> RenderedAudio {
@@ -97,10 +100,20 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
         interleaved.push(master_right[i]);
     }
 
+    let loop_samples = song.loop_points.map(|lp| {
+        let start_sample = (lp.start_beat * sec_per_beat * sample_rate as f32).round() as u32;
+        let end_sample = match lp.end_beat {
+            Some(eb) => (eb * sec_per_beat * sample_rate as f32).round() as u32,
+            None => total_samples as u32,
+        };
+        (start_sample, end_sample)
+    });
+
     RenderedAudio {
         sample_rate,
         channels: 2,
         samples: interleaved,
+        loop_samples,
     }
 }
 
@@ -285,12 +298,109 @@ pub fn export_wav<P: AsRef<Path>>(
         sample_format: hound::SampleFormat::Int,
     };
 
-    let mut writer = WavWriter::create(path, spec)?;
-    for &sample in &audio.samples {
-        let clamped = sample.clamp(-1.0, 1.0);
-        let sample_i16 = (clamped * i16::MAX as f32) as i16;
-        writer.write_sample(sample_i16)?;
+    let p = path.as_ref();
+    {
+        let mut writer = WavWriter::create(p, spec)?;
+        for &sample in &audio.samples {
+            let clamped = sample.clamp(-1.0, 1.0);
+            let sample_i16 = (clamped * i16::MAX as f32) as i16;
+            writer.write_sample(sample_i16)?;
+        }
+        writer.finalize()?;
     }
-    writer.finalize()?;
+
+    if let Some((start_sample, end_sample)) = audio.loop_samples {
+        inject_smpl_chunk(p, audio.sample_rate, start_sample, end_sample)?;
+    }
+
     Ok(())
+}
+
+fn inject_smpl_chunk(
+    path: &Path,
+    sample_rate: u32,
+    start_sample: u32,
+    end_sample: u32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
+
+    let file_len = file.metadata()?.len();
+    if file_len < 12 {
+        return Ok(());
+    }
+
+    // RIFF 'smpl' chunk (60 bytes data + 8 bytes header = 68 bytes)
+    let mut chunk = Vec::with_capacity(68);
+    chunk.extend_from_slice(b"smpl");
+    chunk.extend_from_slice(&60u32.to_le_bytes()); // Chunk data size = 60
+
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Manufacturer
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Product
+    let sample_period = (1_000_000_000.0 / sample_rate as f64).round() as u32;
+    chunk.extend_from_slice(&sample_period.to_le_bytes()); // Nanoseconds per sample
+    chunk.extend_from_slice(&60u32.to_le_bytes()); // MIDI Unity Note (60 = C4)
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // MIDI Pitch Fraction
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // SMPTE Format
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // SMPTE Offset
+    chunk.extend_from_slice(&1u32.to_le_bytes()); // Num Sample Loops = 1
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Sampler Data = 0
+
+    // Loop 0 (24 bytes):
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Cue Point ID
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Type = 0 (Forward loop)
+    chunk.extend_from_slice(&start_sample.to_le_bytes()); // Loop Start
+    chunk.extend_from_slice(&end_sample.to_le_bytes()); // Loop End
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Fraction
+    chunk.extend_from_slice(&0u32.to_le_bytes()); // Play Count (0 = Infinite)
+
+    file.seek(SeekFrom::End(0))?;
+    file.write_all(&chunk)?;
+
+    // Update RIFF chunk size at offset 4..8 (total file len - 8)
+    let updated_riff_size = (file_len + chunk.len() as u64 - 8) as u32;
+    file.seek(SeekFrom::Start(4))?;
+    file.write_all(&updated_riff_size.to_le_bytes())?;
+    file.flush()?;
+
+    Ok(())
+}
+
+pub fn read_wav_loop_points<P: AsRef<Path>>(path: P) -> Option<(u32, u32)> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut header = [0u8; 12];
+    file.read_exact(&mut header).ok()?;
+
+    if &header[0..4] != b"RIFF" || &header[8..12] != b"WAVE" {
+        return None;
+    }
+
+    let mut chunk_header = [0u8; 8];
+    while file.read_exact(&mut chunk_header).is_ok() {
+        let chunk_id = &chunk_header[0..4];
+        let chunk_size = u32::from_le_bytes([
+            chunk_header[4],
+            chunk_header[5],
+            chunk_header[6],
+            chunk_header[7],
+        ]);
+
+        if chunk_id == b"smpl" && chunk_size >= 60 {
+            let mut data = vec![0u8; chunk_size as usize];
+            file.read_exact(&mut data).ok()?;
+            let start = u32::from_le_bytes([data[44], data[45], data[46], data[47]]);
+            let end = u32::from_le_bytes([data[48], data[49], data[50], data[51]]);
+            return Some((start, end));
+        } else {
+            let skip_bytes = if chunk_size % 2 != 0 {
+                chunk_size as i64 + 1
+            } else {
+                chunk_size as i64
+            };
+            if file.seek(SeekFrom::Current(skip_bytes)).is_err() {
+                break;
+            }
+        }
+    }
+
+    None
 }
