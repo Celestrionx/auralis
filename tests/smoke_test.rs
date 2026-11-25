@@ -1,9 +1,11 @@
 use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
+use auralis::mcp::handle_mcp_request;
 use auralis::model::{
     Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
     Track, Waveform,
 };
 use auralis::telemetry::analyze_audio;
+use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 #[test]
@@ -676,4 +678,130 @@ fn test_pattern_missing_graceful_fallback() {
 
     let rendered = compile_song(&song);
     assert!(!rendered.samples.is_empty());
+}
+
+#[test]
+fn test_mcp_tools_list_inspect_soundfont_and_eval_wav() {
+    let list_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list"
+    }));
+    let tools = list_resp["result"]["tools"]
+        .as_array()
+        .expect("tools array");
+    let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+    assert!(names.contains(&"auralis_init_manifest"));
+    assert!(names.contains(&"auralis_compile_audio"));
+    assert!(names.contains(&"auralis_inspect_soundfont"));
+    assert!(names.contains(&"auralis_eval_wav"));
+
+    // Error handling on missing files
+    let missing_sf = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_inspect_soundfont",
+            "arguments": { "soundfont_path": "assets/missing.sf2" }
+        }
+    }));
+    assert_eq!(missing_sf["result"]["isError"], json!(true));
+
+    let missing_wav = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_eval_wav",
+            "arguments": { "wav_path": "missing_audio.wav" }
+        }
+    }));
+    assert_eq!(missing_wav["result"]["isError"], json!(true));
+
+    // Real SoundFont preset discovery (if bundled TimGM6mb.sf2 exists)
+    let sf2_path = "assets/soundfonts/TimGM6mb.sf2";
+    if std::path::Path::new(sf2_path).exists() {
+        let sf_resp = handle_mcp_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "auralis_inspect_soundfont",
+                "arguments": { "soundfont_path": sf2_path, "bank": 128 }
+            }
+        }));
+        assert!(sf_resp["result"]["isError"].is_null());
+        let text = sf_resp["result"]["content"][0]["text"]
+            .as_str()
+            .expect("sf json text");
+        let parsed: Value = serde_json::from_str(text).expect("valid json");
+        let presets = parsed["presets"].as_array().expect("presets array");
+        assert!(
+            presets
+                .iter()
+                .any(|p| p["bank"] == 128 && p["preset"] == 25)
+        );
+    }
+
+    // Compile + evaluate WAV via MCP
+    let tmp_wav = std::env::temp_dir().join("auralis_mcp_eval_test.wav");
+    let song = Song {
+        tempo: 120.0,
+        loop_points: Some(LoopPoints {
+            start_beat: 0.0,
+            end_beat: Some(2.0),
+        }),
+        tracks: vec![Track {
+            id: "tone".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr::default(),
+                pitch_env: None,
+            },
+            fx: vec![],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 2.0,
+                midi_note: 69,
+                velocity: 0.7,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let compile_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_compile_audio",
+            "arguments": {
+                "manifest_json": serde_json::to_string(&song).unwrap(),
+                "output_wav_path": tmp_wav.to_string_lossy()
+            }
+        }
+    }));
+    assert!(compile_resp["result"]["isError"].is_null());
+
+    let eval_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_eval_wav",
+            "arguments": { "wav_path": tmp_wav.to_string_lossy() }
+        }
+    }));
+    assert!(eval_resp["result"]["isError"].is_null());
+    let eval_text = eval_resp["result"]["content"][0]["text"]
+        .as_str()
+        .expect("eval json text");
+    let telemetry: Value = serde_json::from_str(eval_text).expect("valid telemetry json");
+    assert!(telemetry["peak_amplitude"].as_f64().unwrap() > 0.1);
+    assert!(telemetry["loop_telemetry"].is_object());
+
+    let _ = std::fs::remove_file(tmp_wav);
 }
