@@ -10,8 +10,8 @@ pub use graph::{
     export_wav, read_wav_loop_points,
 };
 pub use model::{
-    Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
-    Track, Waveform,
+    Adsr, Clip, FmConfig, FxConfig, InstrumentConfig, LfoConfig, LoopPoints, NoteEvent, Pattern,
+    PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
 pub use telemetry::{
     AudioTelemetry, LoopTelemetry, SectionTelemetry, SpectralEnergy, analyze_audio,

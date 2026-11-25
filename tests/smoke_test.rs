@@ -4,8 +4,8 @@ use auralis::graph::{
 };
 use auralis::mcp::handle_mcp_request;
 use auralis::model::{
-    Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
-    Track, Waveform,
+    Adsr, Clip, FmConfig, FxConfig, InstrumentConfig, LfoConfig, LoopPoints, NoteEvent, Pattern,
+    PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
 use auralis::telemetry::analyze_audio;
 use serde_json::{Value, json};
@@ -32,6 +32,9 @@ fn test_manifest_roundtrip() {
                     drop_semitones: 24.0,
                     decay_sec: 0.05,
                 }),
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![
                 FxConfig::Gain { gain_db: -3.0 },
@@ -167,6 +170,9 @@ fn test_percussion_synthesis() {
                         drop_semitones: 36.0,
                         decay_sec: 0.04,
                     }),
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![],
                 clips: Vec::new(),
@@ -189,6 +195,9 @@ fn test_percussion_synthesis() {
                         release_sec: 0.02,
                     },
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::HighPass {
                     cutoff_hz: 1000.0,
@@ -241,6 +250,9 @@ fn test_stereo_panning_and_chords() {
                         release_sec: 0.2,
                     },
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.8 }],
                 clips: Vec::new(),
@@ -259,6 +271,9 @@ fn test_stereo_panning_and_chords() {
                     waveform: Waveform::Sine,
                     adsr: Adsr::default(),
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.8 }],
                 clips: Vec::new(),
@@ -309,6 +324,9 @@ fn test_seamless_loop_metadata_export_and_read() {
                 waveform: Waveform::Sine,
                 adsr: Adsr::default(),
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -369,6 +387,9 @@ fn test_portamento_glide_and_phase_continuity() {
                     release_sec: 0.05,
                 },
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -414,6 +435,9 @@ fn test_resonant_biquad_saturation_and_master_softclip() {
                 waveform: Waveform::Sawtooth,
                 adsr: Adsr::default(),
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![
                 FxConfig::LowPass {
@@ -466,6 +490,9 @@ fn test_tempo_delay_and_schroeder_reverb_spatial() {
                     release_sec: 0.05,
                 },
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![
                 FxConfig::Delay {
@@ -553,6 +580,9 @@ fn test_pattern_clip_bit_identical_pcm_parity() {
         waveform: Waveform::Sine,
         adsr: Adsr::default(),
         pitch_env: None,
+        unison: None,
+        lfo: None,
+        fm: None,
     };
 
     let flat_song = Song {
@@ -615,6 +645,7 @@ fn test_pattern_clip_transpose_velocity_and_roundtrip() {
                 slide_to_midi: Some(60),
                 glide_beats: Some(0.5),
                 velocity: 0.8,
+                ..Default::default()
             }],
         },
     );
@@ -625,6 +656,9 @@ fn test_pattern_clip_transpose_velocity_and_roundtrip() {
             waveform: Waveform::Triangle,
             adsr: Adsr::default(),
             pitch_env: None,
+            unison: None,
+            lfo: None,
+            fm: None,
         },
         fx: vec![],
         clips: vec![Clip {
@@ -665,6 +699,9 @@ fn test_pattern_missing_graceful_fallback() {
                 waveform: Waveform::Sine,
                 adsr: Adsr::default(),
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![],
             clips: vec![Clip {
@@ -761,6 +798,9 @@ fn test_mcp_tools_list_inspect_soundfont_and_eval_wav() {
                 waveform: Waveform::Sine,
                 adsr: Adsr::default(),
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -822,6 +862,9 @@ fn test_sidechain_ducking_attenuation() {
                 release_sec: 0.05,
             },
             pitch_env: None,
+            unison: None,
+            lfo: None,
+            fm: None,
         },
         fx: vec![FxConfig::Sidechain {
             source_track: "kick".to_string(),
@@ -854,6 +897,9 @@ fn test_sidechain_ducking_attenuation() {
                 release_sec: 0.02,
             },
             pitch_env: None,
+            unison: None,
+            lfo: None,
+            fm: None,
         },
         fx: vec![FxConfig::Gain { gain_db: -40.0 }], // silent in mix, raw trigger still active!
         clips: Vec::new(),
@@ -908,6 +954,9 @@ fn test_sidechain_ducking_attenuation() {
                         release_sec: 0.02,
                     },
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Gain { gain_db: -40.0 }],
                 clips: Vec::new(),
@@ -930,6 +979,9 @@ fn test_sidechain_ducking_attenuation() {
                         release_sec: 0.05,
                     },
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Sidechain {
                     source_track: "kick".to_string(),
@@ -964,6 +1016,9 @@ fn test_compressor_and_stereo_width_mid_side() {
                     waveform: Waveform::Sine,
                     adsr: Adsr::default(),
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.9 }],
                 clips: Vec::new(),
@@ -981,6 +1036,9 @@ fn test_compressor_and_stereo_width_mid_side() {
                     waveform: Waveform::Triangle,
                     adsr: Adsr::default(),
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.9 }],
                 clips: Vec::new(),
@@ -1070,6 +1128,9 @@ fn test_compile_stems_parity_and_loop_markers() {
                     waveform: Waveform::Sine,
                     adsr: Adsr::default(),
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.3 }],
                 clips: Vec::new(),
@@ -1087,6 +1148,9 @@ fn test_compile_stems_parity_and_loop_markers() {
                     waveform: Waveform::Triangle,
                     adsr: Adsr::default(),
                     pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.3 }],
                 clips: Vec::new(),
@@ -1141,6 +1205,9 @@ fn test_export_ogg_with_loop_tags_if_ffmpeg_available() {
                 waveform: Waveform::Sine,
                 adsr: Adsr::default(),
                 pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -1166,4 +1233,130 @@ fn test_export_ogg_with_loop_tags_if_ffmpeg_available() {
     assert!(text_lossy.contains("LOOPLENGTH=44100"));
 
     let _ = std::fs::remove_file(tmp_ogg);
+}
+
+#[test]
+fn test_synth_unison_lfo_and_fm_synthesis() {
+    let song = Song {
+        tempo: 120.0,
+        tracks: vec![
+            Track {
+                id: "supersaw_lfo".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sawtooth,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                    unison: Some(UnisonConfig {
+                        voices: 5,
+                        detune_cents: 24.0,
+                    }),
+                    lfo: Some(LfoConfig {
+                        rate_hz: 5.5,
+                        depth_semitones: 0.25,
+                    }),
+                    fm: None,
+                },
+                fx: vec![FxConfig::Gain { gain_db: -3.0 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 1.5,
+                    midi_note: 60,
+                    velocity: 0.8,
+                    ..Default::default()
+                }],
+            },
+            Track {
+                id: "fm_bell".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr {
+                        attack_sec: 0.005,
+                        decay_sec: 0.3,
+                        sustain_level: 0.2,
+                        release_sec: 0.1,
+                    },
+                    pitch_env: None,
+                    unison: None,
+                    lfo: None,
+                    fm: Some(FmConfig {
+                        mod_ratio: 2.0,
+                        mod_index: 2.5,
+                    }),
+                },
+                fx: vec![FxConfig::Gain { gain_db: -4.0 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 1.5,
+                    midi_note: 72,
+                    velocity: 0.75,
+                    ..Default::default()
+                }],
+            },
+        ],
+        ..Default::default()
+    };
+
+    let serialized = serde_json::to_string(&song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(song, decoded);
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.peak_amplitude > 0.2);
+    assert!(telemetry.spectral_bands.high_ratio > 0.05);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_soundfont_pitch_bend_and_cc64_sustain() {
+    let sf2_path = "assets/soundfonts/TimGM6mb.sf2";
+    if !std::path::Path::new(sf2_path).exists() {
+        return;
+    }
+
+    let song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "expressive_strings".to_string(),
+            instrument: InstrumentConfig::SoundFont {
+                soundfont_path: sf2_path.to_string(),
+                bank: Some(0),
+                preset: Some(48),
+            },
+            fx: vec![FxConfig::Gain { gain_db: -2.0 }],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 60,
+                slide_to_midi: Some(67),
+                glide_beats: Some(0.5),
+                sustain: Some(true),
+                velocity: 0.8,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let serialized = serde_json::to_string(&song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(song, decoded);
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.peak_amplitude > 0.01);
+    assert!(!telemetry.is_clipping);
 }

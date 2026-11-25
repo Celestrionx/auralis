@@ -134,7 +134,31 @@ pub enum InstrumentConfig {
         adsr: Adsr,
         #[serde(default)]
         pitch_env: Option<PitchEnvelope>,
+        #[serde(default)]
+        unison: Option<UnisonConfig>,
+        #[serde(default)]
+        lfo: Option<LfoConfig>,
+        #[serde(default)]
+        fm: Option<FmConfig>,
     },
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct UnisonConfig {
+    pub voices: u8,
+    pub detune_cents: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct LfoConfig {
+    pub rate_hz: f32,
+    pub depth_semitones: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct FmConfig {
+    pub mod_ratio: f32,
+    pub mod_index: f32,
 }
 
 impl InstrumentConfig {
@@ -192,6 +216,8 @@ pub struct NoteEvent {
     pub slide_to_midi: Option<u8>,
     #[serde(default)]
     pub glide_beats: Option<f32>,
+    #[serde(default)]
+    pub sustain: Option<bool>,
 }
 
 impl Default for NoteEvent {
@@ -204,6 +230,7 @@ impl Default for NoteEvent {
             velocity: default_velocity(),
             slide_to_midi: None,
             glide_beats: None,
+            sustain: None,
         }
     }
 }

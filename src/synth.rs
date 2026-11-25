@@ -1,4 +1,4 @@
-use crate::model::{Adsr, Waveform};
+use crate::model::{Adsr, FmConfig, Waveform};
 use std::f32::consts::PI;
 
 pub struct DeterministicNoise {
@@ -23,7 +23,7 @@ impl DeterministicNoise {
 }
 
 pub fn generate_sample(waveform: Waveform, phase: f32, noise: &mut DeterministicNoise) -> f32 {
-    let normalized = phase % (2.0 * PI);
+    let normalized = phase.rem_euclid(2.0 * PI);
     match waveform {
         Waveform::Sine => normalized.sin(),
         Waveform::Square => {
@@ -40,6 +40,20 @@ pub fn generate_sample(waveform: Waveform, phase: f32, noise: &mut Deterministic
         }
         Waveform::Noise => noise.next_sample(),
     }
+}
+
+pub fn generate_modulated_sample(
+    waveform: Waveform,
+    carrier_phase: f32,
+    mod_phase: f32,
+    fm: Option<&FmConfig>,
+    noise: &mut DeterministicNoise,
+) -> f32 {
+    let effective_phase = match fm {
+        Some(cfg) => carrier_phase + cfg.mod_index * mod_phase.sin(),
+        None => carrier_phase,
+    };
+    generate_sample(waveform, effective_phase, noise)
 }
 
 pub fn calculate_envelope(time_sec: f32, duration_sec: f32, adsr: &Adsr) -> f32 {

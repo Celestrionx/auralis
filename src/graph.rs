@@ -1,6 +1,6 @@
 use crate::model::{FxConfig, InstrumentConfig, NoteEvent, Song, Track};
 use crate::soundfont::render_soundfont_track;
-use crate::synth::{DeterministicNoise, calculate_envelope, generate_sample};
+use crate::synth::{DeterministicNoise, calculate_envelope, generate_modulated_sample};
 use hound::{WavSpec, WavWriter};
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_1_SQRT_2, PI, SQRT_2};
@@ -260,12 +260,22 @@ fn render_synth_track(
     total_samples: usize,
     track_seed: u32,
 ) -> Vec<f32> {
-    let (waveform, adsr, pitch_env) = match instrument {
+    let (waveform, adsr, pitch_env, unison, lfo, fm) = match instrument {
         InstrumentConfig::Synth {
             waveform,
             adsr,
             pitch_env,
-        } => (*waveform, adsr, pitch_env.as_ref()),
+            unison,
+            lfo,
+            fm,
+        } => (
+            *waveform,
+            adsr,
+            pitch_env.as_ref(),
+            unison.as_ref(),
+            lfo.as_ref(),
+            fm.as_ref(),
+        ),
         _ => return vec![0.0; total_samples],
     };
 
@@ -274,13 +284,29 @@ fn render_synth_track(
     let two_pi = 2.0 * PI;
     let two_pi_over_sr = two_pi / sample_rate as f32;
 
+    let voice_count = unison.map(|u| u.voices.clamp(1, 7) as usize).unwrap_or(1);
+    let detune_cents = unison
+        .map(|u| u.detune_cents.clamp(0.0, 200.0))
+        .unwrap_or(0.0);
+    let unison_norm = 1.0 / (voice_count as f32).sqrt();
+    let voice_detunes: Vec<f32> = (0..voice_count)
+        .map(|v| {
+            if voice_count == 1 {
+                0.0
+            } else {
+                let frac = (v as f32 / (voice_count - 1) as f32) * 2.0 - 1.0;
+                (frac * detune_cents * 0.5) / 100.0
+            }
+        })
+        .collect();
+
     for (ev_idx, ev) in events.iter().enumerate() {
         let start_sec = ev.start_beats * sec_per_beat;
         let duration_sec = ev.duration_beats * sec_per_beat;
         let glide_dur_sec = ev.glide_beats.unwrap_or(ev.duration_beats).max(0.0001) * sec_per_beat;
         let notes = ev.notes();
         let note_count = notes.len().max(1) as f32;
-        let velocity_per_voice = ev.velocity / note_count.sqrt();
+        let velocity_per_voice = (ev.velocity / note_count.sqrt()) * unison_norm;
 
         let start_sample = (start_sec * sample_rate as f32) as usize;
         let note_total_sec = duration_sec + adsr.release_sec;
@@ -288,35 +314,52 @@ fn render_synth_track(
         let end_sample = (start_sample + note_total_samples).min(total_samples);
 
         for &midi in &notes {
-            let mut phase = 0.0_f32;
-            for (offset, s) in buffer[start_sample..end_sample].iter_mut().enumerate() {
-                let t = offset as f32 / sample_rate as f32;
+            for (v_idx, &detune_semi) in voice_detunes.iter().enumerate() {
+                let mut phase = (v_idx as f32 / voice_count as f32) * two_pi;
+                let mut mod_phase = 0.0_f32;
 
-                let base_midi = if let Some(target_midi) = ev.slide_to_midi {
-                    let frac = (t / glide_dur_sec).clamp(0.0, 1.0);
-                    midi as f32 + (target_midi as f32 - midi as f32) * frac
-                } else {
-                    midi as f32
-                };
+                for (offset, s) in buffer[start_sample..end_sample].iter_mut().enumerate() {
+                    let t = offset as f32 / sample_rate as f32;
 
-                let pitch_drop = if let Some(penv) = pitch_env {
-                    if penv.decay_sec > 0.0001 && t <= penv.decay_sec {
-                        let factor = 1.0 - (t / penv.decay_sec);
-                        penv.drop_semitones * factor
+                    let base_midi = if let Some(target_midi) = ev.slide_to_midi {
+                        let frac = (t / glide_dur_sec).clamp(0.0, 1.0);
+                        midi as f32 + (target_midi as f32 - midi as f32) * frac
+                    } else {
+                        midi as f32
+                    };
+
+                    let pitch_drop = if let Some(penv) = pitch_env {
+                        if penv.decay_sec > 0.0001 && t <= penv.decay_sec {
+                            let factor = 1.0 - (t / penv.decay_sec);
+                            penv.drop_semitones * factor
+                        } else {
+                            0.0
+                        }
                     } else {
                         0.0
+                    };
+
+                    let lfo_semi = if let Some(lfo_cfg) = lfo {
+                        lfo_cfg.depth_semitones * (two_pi * lfo_cfg.rate_hz.max(0.0) * t).sin()
+                    } else {
+                        0.0
+                    };
+
+                    let effective_midi =
+                        (base_midi + pitch_drop + detune_semi + lfo_semi).clamp(0.0, 127.0);
+                    let freq = 440.0 * 2.0_f32.powf((effective_midi - 69.0) / 12.0);
+
+                    let raw_sample =
+                        generate_modulated_sample(waveform, phase, mod_phase, fm, &mut noise_gen);
+                    phase = (phase + two_pi_over_sr * freq) % two_pi;
+                    if let Some(fm_cfg) = fm {
+                        mod_phase = (mod_phase
+                            + two_pi_over_sr * freq * fm_cfg.mod_ratio.max(0.01))
+                            % two_pi;
                     }
-                } else {
-                    0.0
-                };
-
-                let effective_midi = (base_midi + pitch_drop).clamp(0.0, 127.0);
-                let freq = 440.0 * 2.0_f32.powf((effective_midi - 69.0) / 12.0);
-
-                let raw_sample = generate_sample(waveform, phase, &mut noise_gen);
-                phase = (phase + two_pi_over_sr * freq) % two_pi;
-                let env = calculate_envelope(t, duration_sec, adsr);
-                *s += raw_sample * env * velocity_per_voice;
+                    let env = calculate_envelope(t, duration_sec, adsr);
+                    *s += raw_sample * env * velocity_per_voice;
+                }
             }
         }
 
