@@ -10,4 +10,6 @@ pub use model::{
     Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
     Track, Waveform,
 };
-pub use telemetry::{AudioTelemetry, LoopTelemetry, SpectralEnergy, analyze_audio};
+pub use telemetry::{
+    AudioTelemetry, LoopTelemetry, SectionTelemetry, SpectralEnergy, analyze_audio,
+};

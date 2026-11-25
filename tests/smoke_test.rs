@@ -1017,3 +1017,37 @@ fn test_compressor_and_stereo_width_mid_side() {
     assert!(telemetry.stereo_correlation.unwrap() > 0.999);
     assert!(telemetry.peak_amplitude < 0.75);
 }
+
+#[test]
+fn test_section_telemetry_crest_factor_and_diagnostics() {
+    let sr = 44100;
+    let total_frames = sr * 2; // 2.0 seconds -> 4 sections of 0.5s each
+    let mut samples = vec![0.0_f32; total_frames * 2];
+
+    // Section 0..1 (first 1.0s): quiet 80 Hz sub-bass (-28 dBFS)
+    // Section 2..3 (last 1.0s): loud 80 Hz sub-bass (-3 dBFS) -> triggers SUB_BASS_DOMINANT, DULL_HIGH_END, HIGH_SECTION_VARIANCE
+    for frame in 0..total_frames {
+        let t = frame as f32 / sr as f32;
+        let amp = if frame < sr { 0.04 } else { 0.70 };
+        let val = (2.0 * std::f32::consts::PI * 80.0 * t).sin() * amp;
+        samples[frame * 2] = val;
+        samples[frame * 2 + 1] = val;
+    }
+
+    let telemetry = analyze_audio(&samples, sr as u32, 2, None);
+    assert_eq!(telemetry.sections.len(), 4);
+    assert!(telemetry.crest_factor_db > 2.0);
+    assert!(telemetry.side_to_mid_ratio.unwrap() < 0.001);
+    assert!(
+        telemetry
+            .diagnostics
+            .contains(&"SUB_BASS_DOMINANT".to_string())
+    );
+    assert!(telemetry.diagnostics.contains(&"DULL_HIGH_END".to_string()));
+    assert!(
+        telemetry
+            .diagnostics
+            .contains(&"HIGH_SECTION_VARIANCE".to_string())
+    );
+    assert!(telemetry.sections[3].rms_dbfs > telemetry.sections[0].rms_dbfs + 18.0);
+}
