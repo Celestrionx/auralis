@@ -1249,6 +1249,7 @@ fn test_synth_unison_lfo_and_fm_synthesis() {
                     unison: Some(UnisonConfig {
                         voices: 5,
                         detune_cents: 24.0,
+                        ..Default::default()
                     }),
                     lfo: Some(LfoConfig {
                         rate_hz: 5.5,
@@ -1311,6 +1312,8 @@ fn test_synth_unison_lfo_and_fm_synthesis() {
     );
     assert!(telemetry.peak_amplitude > 0.2);
     assert!(telemetry.spectral_bands.high_ratio > 0.05);
+    assert!(telemetry.stereo_correlation.unwrap() < 0.85);
+    assert!(telemetry.side_to_mid_ratio.unwrap() > 0.25);
     assert!(!telemetry.is_clipping);
 }
 

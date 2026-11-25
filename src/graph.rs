@@ -3,7 +3,7 @@ use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_modulated_sample};
 use hound::{WavSpec, WavWriter};
 use std::collections::{HashMap, HashSet};
-use std::f32::consts::{FRAC_1_SQRT_2, PI, SQRT_2};
+use std::f32::consts::{PI, SQRT_2};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -50,20 +50,14 @@ fn render_raw_track(
                 (vec![0.0; total_samples], vec![0.0; total_samples])
             }
         },
-        InstrumentConfig::Synth { .. } => {
-            let track_mono = render_synth_track(
-                &track.instrument,
-                events,
-                sample_rate,
-                sec_per_beat,
-                total_samples,
-                t_idx as u32,
-            );
-            // Constant-power mono-to-stereo baseline before unified stereo FX chain
-            let left: Vec<f32> = track_mono.iter().map(|&s| s * FRAC_1_SQRT_2).collect();
-            let right = left.clone();
-            (left, right)
-        }
+        InstrumentConfig::Synth { .. } => render_synth_track(
+            &track.instrument,
+            events,
+            sample_rate,
+            sec_per_beat,
+            total_samples,
+            t_idx as u32,
+        ),
     }
 }
 
@@ -259,7 +253,7 @@ fn render_synth_track(
     sec_per_beat: f32,
     total_samples: usize,
     track_seed: u32,
-) -> Vec<f32> {
+) -> (Vec<f32>, Vec<f32>) {
     let (waveform, adsr, pitch_env, unison, lfo, fm) = match instrument {
         InstrumentConfig::Synth {
             waveform,
@@ -276,10 +270,11 @@ fn render_synth_track(
             lfo.as_ref(),
             fm.as_ref(),
         ),
-        _ => return vec![0.0; total_samples],
+        _ => return (vec![0.0; total_samples], vec![0.0; total_samples]),
     };
 
-    let mut buffer = vec![0.0_f32; total_samples];
+    let mut left_buf = vec![0.0_f32; total_samples];
+    let mut right_buf = vec![0.0_f32; total_samples];
     let mut noise_gen = DeterministicNoise::new(track_seed + 1);
     let two_pi = 2.0 * PI;
     let two_pi_over_sr = two_pi / sample_rate as f32;
@@ -288,15 +283,20 @@ fn render_synth_track(
     let detune_cents = unison
         .map(|u| u.detune_cents.clamp(0.0, 200.0))
         .unwrap_or(0.0);
+    let stereo_spread = unison
+        .map(|u| u.stereo_spread.clamp(0.0, 1.0))
+        .unwrap_or(0.0);
     let unison_norm = 1.0 / (voice_count as f32).sqrt();
-    let voice_detunes: Vec<f32> = (0..voice_count)
+    let voice_params: Vec<(f32, f32, f32)> = (0..voice_count)
         .map(|v| {
-            if voice_count == 1 {
-                0.0
+            let (detune_semi, pan) = if voice_count == 1 {
+                (0.0, 0.0)
             } else {
                 let frac = (v as f32 / (voice_count - 1) as f32) * 2.0 - 1.0;
-                (frac * detune_cents * 0.5) / 100.0
-            }
+                ((frac * detune_cents * 0.5) / 100.0, frac * stereo_spread)
+            };
+            let theta = (pan + 1.0) * (PI / 4.0);
+            (detune_semi, theta.cos(), theta.sin())
         })
         .collect();
 
@@ -314,11 +314,12 @@ fn render_synth_track(
         let end_sample = (start_sample + note_total_samples).min(total_samples);
 
         for &midi in &notes {
-            for (v_idx, &detune_semi) in voice_detunes.iter().enumerate() {
+            for (v_idx, &(detune_semi, pan_l, pan_r)) in voice_params.iter().enumerate() {
                 let mut phase = (v_idx as f32 / voice_count as f32) * two_pi;
                 let mut mod_phase = 0.0_f32;
 
-                for (offset, s) in buffer[start_sample..end_sample].iter_mut().enumerate() {
+                for offset in 0..(end_sample - start_sample) {
+                    let s_idx = start_sample + offset;
                     let t = offset as f32 / sample_rate as f32;
 
                     let base_midi = if let Some(target_midi) = ev.slide_to_midi {
@@ -358,7 +359,9 @@ fn render_synth_track(
                             % two_pi;
                     }
                     let env = calculate_envelope(t, duration_sec, adsr);
-                    *s += raw_sample * env * velocity_per_voice;
+                    let mono_val = raw_sample * env * velocity_per_voice;
+                    left_buf[s_idx] += mono_val * pan_l;
+                    right_buf[s_idx] += mono_val * pan_r;
                 }
             }
         }
@@ -366,7 +369,7 @@ fn render_synth_track(
         noise_gen = DeterministicNoise::new(track_seed.wrapping_add(ev_idx as u32 * 31 + 7));
     }
 
-    buffer
+    (left_buf, right_buf)
 }
 
 fn apply_biquad_channel(samples: &mut [f32], b0: f32, b1: f32, b2: f32, a1: f32, a2: f32) {

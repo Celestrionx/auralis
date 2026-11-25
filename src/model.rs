@@ -143,10 +143,26 @@ pub enum InstrumentConfig {
     },
 }
 
+fn default_unison_stereo_spread() -> f32 {
+    0.85
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct UnisonConfig {
     pub voices: u8,
     pub detune_cents: f32,
+    #[serde(default = "default_unison_stereo_spread")]
+    pub stereo_spread: f32,
+}
+
+impl Default for UnisonConfig {
+    fn default() -> Self {
+        Self {
+            voices: 1,
+            detune_cents: 0.0,
+            stereo_spread: default_unison_stereo_spread(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
