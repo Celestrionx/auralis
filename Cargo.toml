@@ -5,6 +5,9 @@ edition = "2024"
 authors = ["WinPhay"]
 description = "Headless Audio Graph Compiler & Auditory Telemetry Engine for Autonomous Agents"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Celestrionx/auralis"
+homepage = "https://github.com/Celestrionx/auralis"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
