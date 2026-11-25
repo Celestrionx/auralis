@@ -1,6 +1,12 @@
-# Auralis (`v0.2.0`)
+<p align="center">
+  <img src="doc/assets/auralis-logo.png" alt="Auralis logo" width="180" />
+</p>
 
-Headless Audio Graph Compiler & Auditory Telemetry Engine in pure Rust for autonomous AI agents.
+<h1 align="center">Auralis (<code>v0.2.0</code>)</h1>
+
+<p align="center">
+  Headless Audio Graph Compiler &amp; Auditory Telemetry Engine in pure Rust for autonomous AI agents.
+</p>
 
 ## For AI Agents
 See [AGENTS.md](AGENTS.md) for crate layout, exact commands, architectural boundaries, and git workflow, [DESIGN.md](DESIGN.md) for invariants, and [doc/adr/](doc/adr/) for Architecture Decision Records (`ADR-0001` through `ADR-0016`).
