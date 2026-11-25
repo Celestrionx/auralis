@@ -805,3 +805,215 @@ fn test_mcp_tools_list_inspect_soundfont_and_eval_wav() {
 
     let _ = std::fs::remove_file(tmp_wav);
 }
+
+#[test]
+fn test_sidechain_ducking_attenuation() {
+    let pad_track = Track {
+        id: "pad".to_string(),
+        instrument: InstrumentConfig::Synth {
+            waveform: Waveform::Sine,
+            adsr: Adsr {
+                attack_sec: 0.005,
+                decay_sec: 0.05,
+                sustain_level: 0.9,
+                release_sec: 0.05,
+            },
+            pitch_env: None,
+        },
+        fx: vec![FxConfig::Sidechain {
+            source_track: "kick".to_string(),
+            amount: 0.9,
+            threshold_db: -24.0,
+            attack_sec: 0.002,
+            release_sec: 0.10,
+        }],
+        clips: Vec::new(),
+        events: vec![NoteEvent {
+            start_beats: 0.0,
+            duration_beats: 2.0,
+            midi_note: 60,
+            velocity: 0.8,
+            ..Default::default()
+        }],
+    };
+
+    let mut dry_pad = pad_track.clone();
+    dry_pad.fx.clear();
+
+    let kick_track = Track {
+        id: "kick".to_string(),
+        instrument: InstrumentConfig::Synth {
+            waveform: Waveform::Sine,
+            adsr: Adsr {
+                attack_sec: 0.001,
+                decay_sec: 0.15,
+                sustain_level: 0.0,
+                release_sec: 0.02,
+            },
+            pitch_env: None,
+        },
+        fx: vec![FxConfig::Gain { gain_db: -40.0 }], // silent in mix, raw trigger still active!
+        clips: Vec::new(),
+        events: vec![NoteEvent {
+            start_beats: 0.0,
+            duration_beats: 0.5,
+            midi_note: 36,
+            velocity: 1.0,
+            ..Default::default()
+        }],
+    };
+
+    let dry_audio = compile_song(&Song {
+        tempo: 120.0,
+        tracks: vec![dry_pad],
+        ..Default::default()
+    });
+    let ducked_audio = compile_song(&Song {
+        tempo: 120.0,
+        tracks: vec![kick_track, pad_track],
+        ..Default::default()
+    });
+
+    // During kick transient (first 150ms), ducked RMS must be noticeably lower than dry RMS
+    let window = (44100.0 * 0.15) as usize * 2;
+    let dry_rms: f32 = (dry_audio.samples[..window]
+        .iter()
+        .map(|s| s * s)
+        .sum::<f32>()
+        / window as f32)
+        .sqrt();
+    let ducked_rms: f32 = (ducked_audio.samples[..window]
+        .iter()
+        .map(|s| s * s)
+        .sum::<f32>()
+        / window as f32)
+        .sqrt();
+    assert!(ducked_rms < dry_rms * 0.6);
+
+    // Deterministic parallel compile check
+    let ducked_again = compile_song(&Song {
+        tempo: 120.0,
+        tracks: vec![
+            Track {
+                id: "kick".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr {
+                        attack_sec: 0.001,
+                        decay_sec: 0.15,
+                        sustain_level: 0.0,
+                        release_sec: 0.02,
+                    },
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Gain { gain_db: -40.0 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 0.5,
+                    midi_note: 36,
+                    velocity: 1.0,
+                    ..Default::default()
+                }],
+            },
+            Track {
+                id: "pad".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr {
+                        attack_sec: 0.005,
+                        decay_sec: 0.05,
+                        sustain_level: 0.9,
+                        release_sec: 0.05,
+                    },
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Sidechain {
+                    source_track: "kick".to_string(),
+                    amount: 0.9,
+                    threshold_db: -24.0,
+                    attack_sec: 0.002,
+                    release_sec: 0.10,
+                }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 2.0,
+                    midi_note: 60,
+                    velocity: 0.8,
+                    ..Default::default()
+                }],
+            },
+        ],
+        ..Default::default()
+    });
+    assert_eq!(ducked_audio.samples, ducked_again.samples);
+}
+
+#[test]
+fn test_compressor_and_stereo_width_mid_side() {
+    let song = Song {
+        tempo: 120.0,
+        tracks: vec![
+            Track {
+                id: "left_tone".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: -0.9 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 1.0,
+                    midi_note: 60,
+                    velocity: 0.9,
+                    ..Default::default()
+                }],
+            },
+            Track {
+                id: "right_tone".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Triangle,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: 0.9 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 1.0,
+                    midi_note: 67,
+                    velocity: 0.9,
+                    ..Default::default()
+                }],
+            },
+        ],
+        master_fx: vec![
+            FxConfig::Compressor {
+                threshold_db: -18.0,
+                ratio: 4.0,
+                attack_sec: 0.003,
+                release_sec: 0.08,
+                makeup_db: 0.0,
+            },
+            FxConfig::StereoWidth { width: 0.0 }, // Collapse to mono
+        ],
+        ..Default::default()
+    };
+
+    let serialized = serde_json::to_string(&song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(song, decoded);
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.stereo_correlation.unwrap() > 0.999);
+    assert!(telemetry.peak_amplitude < 0.75);
+}

@@ -230,6 +230,18 @@ impl NoteEvent {
     }
 }
 
+fn default_sidechain_threshold_db() -> f32 {
+    -24.0
+}
+
+fn default_sidechain_attack_sec() -> f32 {
+    0.005
+}
+
+fn default_sidechain_release_sec() -> f32 {
+    0.15
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum FxConfig {
@@ -262,5 +274,26 @@ pub enum FxConfig {
         room_size: f32,
         damping: f32,
         mix: f32,
+    },
+    Sidechain {
+        source_track: String,
+        amount: f32,
+        #[serde(default = "default_sidechain_threshold_db")]
+        threshold_db: f32,
+        #[serde(default = "default_sidechain_attack_sec")]
+        attack_sec: f32,
+        #[serde(default = "default_sidechain_release_sec")]
+        release_sec: f32,
+    },
+    Compressor {
+        threshold_db: f32,
+        ratio: f32,
+        attack_sec: f32,
+        release_sec: f32,
+        #[serde(default)]
+        makeup_db: f32,
+    },
+    StereoWidth {
+        width: f32,
     },
 }

@@ -1,7 +1,8 @@
-use crate::model::{FxConfig, InstrumentConfig, NoteEvent, Song};
+use crate::model::{FxConfig, InstrumentConfig, NoteEvent, Song, Track};
 use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_sample};
 use hound::{WavSpec, WavWriter};
+use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_1_SQRT_2, PI, SQRT_2};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -12,6 +13,54 @@ pub struct RenderedAudio {
     pub channels: u16,
     pub samples: Vec<f32>, // interleaved: [L0, R0, L1, R1, ...]
     pub loop_samples: Option<(u32, u32)>,
+}
+
+fn render_raw_track(
+    t_idx: usize,
+    track: &Track,
+    events: &[NoteEvent],
+    sample_rate: u32,
+    sec_per_beat: f32,
+    total_samples: usize,
+) -> (Vec<f32>, Vec<f32>) {
+    match &track.instrument {
+        InstrumentConfig::SoundFont {
+            soundfont_path,
+            bank,
+            preset,
+        } => match render_soundfont_track(
+            events,
+            soundfont_path,
+            *bank,
+            *preset,
+            sample_rate,
+            sec_per_beat,
+            total_samples,
+        ) {
+            Ok(buffers) => buffers,
+            Err(err) => {
+                eprintln!(
+                    "Warning: Failed to render soundfont track '{}' ({}): {}",
+                    track.id, soundfont_path, err
+                );
+                (vec![0.0; total_samples], vec![0.0; total_samples])
+            }
+        },
+        InstrumentConfig::Synth { .. } => {
+            let track_mono = render_synth_track(
+                &track.instrument,
+                events,
+                sample_rate,
+                sec_per_beat,
+                total_samples,
+                t_idx as u32,
+            );
+            // Constant-power mono-to-stereo baseline before unified stereo FX chain
+            let left: Vec<f32> = track_mono.iter().map(|&s| s * FRAC_1_SQRT_2).collect();
+            let right = left.clone();
+            (left, right)
+        }
+    }
 }
 
 pub fn compile_song(song: &Song) -> RenderedAudio {
@@ -43,63 +92,80 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
     let tail_sec = if has_tail_fx { 1.0_f32 } else { 0.1_f32 };
 
     let total_samples = ((total_duration_sec + tail_sec) * sample_rate as f32).ceil() as usize;
+
+    // Pass 1: Parallel stem synthesis via std::thread::scope
+    let mut track_buffers: Vec<(Vec<f32>, Vec<f32>)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = song
+            .tracks
+            .iter()
+            .zip(resolved_events.iter())
+            .enumerate()
+            .map(|(t_idx, (track, events))| {
+                scope.spawn(move || {
+                    render_raw_track(
+                        t_idx,
+                        track,
+                        events,
+                        sample_rate,
+                        sec_per_beat,
+                        total_samples,
+                    )
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .map(|h| h.join().expect("Track render thread panicked"))
+            .collect()
+    });
+
+    // Extract mono detector signals only for tracks referenced by Sidechain FX
+    let sc_targets: HashSet<&str> = song
+        .tracks
+        .iter()
+        .chain(std::iter::empty())
+        .flat_map(|t| t.fx.iter())
+        .chain(song.master_fx.iter())
+        .filter_map(|fx| match fx {
+            FxConfig::Sidechain { source_track, .. } => Some(source_track.as_str()),
+            _ => None,
+        })
+        .collect();
+
+    let sidechain_refs: HashMap<String, Vec<f32>> = if sc_targets.is_empty() {
+        HashMap::new()
+    } else {
+        song.tracks
+            .iter()
+            .zip(track_buffers.iter())
+            .filter(|(t, _)| sc_targets.contains(t.id.as_str()))
+            .map(|(t, (l, r))| {
+                let mono: Vec<f32> = l
+                    .iter()
+                    .zip(r.iter())
+                    .map(|(&lv, &rv)| lv.abs().max(rv.abs()))
+                    .collect();
+                (t.id.clone(), mono)
+            })
+            .collect()
+    };
+
+    // Pass 2: Parallel track FX chains (including Sidechain, Compressor, StereoWidth)
+    std::thread::scope(|scope| {
+        let sc_map = &sidechain_refs;
+        for (track, (left, right)) in song.tracks.iter().zip(track_buffers.iter_mut()) {
+            scope.spawn(move || {
+                apply_stereo_fx(left, right, &track.fx, sample_rate, sec_per_beat, sc_map);
+            });
+        }
+    });
+
     let mut master_left = vec![0.0_f32; total_samples];
     let mut master_right = vec![0.0_f32; total_samples];
-
-    for (t_idx, (track, events)) in song.tracks.iter().zip(resolved_events.iter()).enumerate() {
-        match &track.instrument {
-            InstrumentConfig::SoundFont {
-                soundfont_path,
-                bank,
-                preset,
-            } => {
-                let (mut left, mut right) = match render_soundfont_track(
-                    events,
-                    soundfont_path,
-                    *bank,
-                    *preset,
-                    sample_rate,
-                    sec_per_beat,
-                    total_samples,
-                ) {
-                    Ok(buffers) => buffers,
-                    Err(err) => {
-                        eprintln!(
-                            "Warning: Failed to render soundfont track '{}' ({}): {}",
-                            track.id, soundfont_path, err
-                        );
-                        (vec![0.0; total_samples], vec![0.0; total_samples])
-                    }
-                };
-
-                apply_stereo_fx(&mut left, &mut right, &track.fx, sample_rate, sec_per_beat);
-
-                for i in 0..total_samples {
-                    master_left[i] += left[i];
-                    master_right[i] += right[i];
-                }
-            }
-            InstrumentConfig::Synth { .. } => {
-                let track_mono = render_synth_track(
-                    &track.instrument,
-                    events,
-                    sample_rate,
-                    sec_per_beat,
-                    total_samples,
-                    t_idx as u32,
-                );
-
-                // Constant-power mono-to-stereo baseline before unified stereo FX chain
-                let mut left: Vec<f32> = track_mono.iter().map(|&s| s * FRAC_1_SQRT_2).collect();
-                let mut right = left.clone();
-
-                apply_stereo_fx(&mut left, &mut right, &track.fx, sample_rate, sec_per_beat);
-
-                for i in 0..total_samples {
-                    master_left[i] += left[i];
-                    master_right[i] += right[i];
-                }
-            }
+    for (left, right) in &track_buffers {
+        for i in 0..total_samples {
+            master_left[i] += left[i];
+            master_right[i] += right[i];
         }
     }
 
@@ -110,6 +176,7 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
             &song.master_fx,
             sample_rate,
             sec_per_beat,
+            &sidechain_refs,
         );
     }
 
@@ -395,12 +462,49 @@ fn apply_schroeder_reverb(
     process_schroeder_channel(right, sr_scale, 23, feedback, damp1, damp2, wet);
 }
 
+struct DynamicsParams {
+    threshold_db: f32,
+    slope: f32,
+    attack_sec: f32,
+    release_sec: f32,
+    makeup_db: f32,
+}
+
+fn apply_envelope_dynamics(
+    left: &mut [f32],
+    right: &mut [f32],
+    detector_signal: Option<&[f32]>,
+    sample_rate: u32,
+    params: DynamicsParams,
+) {
+    let atk_coeff = (-1.0 / (params.attack_sec.max(0.0005) * sample_rate as f32)).exp();
+    let rel_coeff = (-1.0 / (params.release_sec.max(0.005) * sample_rate as f32)).exp();
+    let mut env = 0.0_f32;
+
+    for (i, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
+        let det = match detector_signal {
+            Some(sig) => sig.get(i).copied().unwrap_or(0.0),
+            None => l.abs().max(r.abs()),
+        };
+        let coeff = if det > env { atk_coeff } else { rel_coeff };
+        env = coeff * env + (1.0 - coeff) * det;
+
+        let env_db = 20.0 * env.max(1e-6).log10();
+        let excess_db = (env_db - params.threshold_db).max(0.0);
+        let gain_db = -excess_db * params.slope + params.makeup_db;
+        let gain = 10.0_f32.powf(gain_db / 20.0);
+        *l *= gain;
+        *r *= gain;
+    }
+}
+
 fn apply_stereo_fx(
     left: &mut [f32],
     right: &mut [f32],
     fx_list: &[FxConfig],
     sample_rate: u32,
     sec_per_beat: f32,
+    sidechain_refs: &HashMap<String, Vec<f32>>,
 ) {
     for fx in fx_list {
         match fx {
@@ -504,6 +608,65 @@ fn apply_stereo_fx(
                 mix,
             } => {
                 apply_schroeder_reverb(left, right, sample_rate, *room_size, *damping, *mix);
+            }
+            FxConfig::Sidechain {
+                source_track,
+                amount,
+                threshold_db,
+                attack_sec,
+                release_sec,
+            } => {
+                if let Some(detector) = sidechain_refs.get(source_track) {
+                    apply_envelope_dynamics(
+                        left,
+                        right,
+                        Some(detector.as_slice()),
+                        sample_rate,
+                        DynamicsParams {
+                            threshold_db: *threshold_db,
+                            slope: amount.clamp(0.0, 1.0),
+                            attack_sec: *attack_sec,
+                            release_sec: *release_sec,
+                            makeup_db: 0.0,
+                        },
+                    );
+                } else {
+                    eprintln!(
+                        "Warning: Sidechain source_track '{}' not found",
+                        source_track
+                    );
+                }
+            }
+            FxConfig::Compressor {
+                threshold_db,
+                ratio,
+                attack_sec,
+                release_sec,
+                makeup_db,
+            } => {
+                let slope = 1.0 - 1.0 / ratio.max(1.0);
+                apply_envelope_dynamics(
+                    left,
+                    right,
+                    None,
+                    sample_rate,
+                    DynamicsParams {
+                        threshold_db: *threshold_db,
+                        slope,
+                        attack_sec: *attack_sec,
+                        release_sec: *release_sec,
+                        makeup_db: *makeup_db,
+                    },
+                );
+            }
+            FxConfig::StereoWidth { width } => {
+                let w = width.clamp(0.0, 3.0);
+                for (l, r) in left.iter_mut().zip(right.iter_mut()) {
+                    let mid = (*l + *r) * 0.5;
+                    let side = (*l - *r) * 0.5 * w;
+                    *l = mid + side;
+                    *r = mid - side;
+                }
             }
         }
     }
