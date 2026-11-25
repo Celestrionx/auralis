@@ -1,6 +1,7 @@
 pub mod graph;
 pub mod mcp;
 pub mod model;
+pub mod sampler;
 pub mod soundfont;
 pub mod synth;
 pub mod telemetry;

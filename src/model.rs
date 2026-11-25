@@ -118,6 +118,10 @@ impl Track {
     }
 }
 
+fn default_sample_root_midi() -> u8 {
+    60
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum InstrumentConfig {
@@ -127,6 +131,11 @@ pub enum InstrumentConfig {
         bank: Option<u32>,
         #[serde(default)]
         preset: Option<u32>,
+    },
+    Sample {
+        wav_path: String,
+        #[serde(default = "default_sample_root_midi")]
+        root_midi: u8,
     },
     Synth {
         waveform: Waveform,

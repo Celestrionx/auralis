@@ -1507,3 +1507,104 @@ fn test_per_note_filter_envelope_pluck() {
     );
     assert!(!telemetry.is_clipping);
 }
+
+#[test]
+fn test_wav_sample_instrument_roundtrip_fallback_and_pitch_shift() {
+    // 1. JSON roundtrip & graceful missing-file fallback
+    let missing_song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "missing_sample".to_string(),
+            instrument: InstrumentConfig::Sample {
+                wav_path: "assets/does_not_exist.wav".to_string(),
+                root_midi: 60,
+            },
+            fx: vec![],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 60,
+                velocity: 0.8,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let serialized = serde_json::to_string(&missing_song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(missing_song, decoded);
+    let fallback_audio = compile_song(&missing_song);
+    assert!(!fallback_audio.samples.is_empty());
+
+    // 2. Real WAV one-shot + pitched octave shift (100 Hz root @ MIDI 60 -> 200 Hz @ MIDI 72 -> +12st, plus high 3 kHz -> 6 kHz)
+    let tmp_wav = std::env::temp_dir().join("auralis_sample_source_3khz.wav");
+    let source_song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "src".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr {
+                    attack_sec: 0.005,
+                    decay_sec: 0.05,
+                    sustain_level: 1.0,
+                    release_sec: 0.02,
+                },
+                pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
+                filter_env: None,
+            },
+            fx: vec![],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 2.0,
+                midi_note: 102, // ~2960 Hz (mid band <= 4 kHz)
+                velocity: 0.7,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+    let source_audio = compile_song(&source_song);
+    export_wav(&source_audio, &tmp_wav).expect("Export source WAV failed");
+
+    // Trigger at MIDI 72 (+12 semitones over root_midi=60) -> shifts ~2960 Hz up to ~5920 Hz (high band > 4 kHz!)
+    let pitched_song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "pitched_sample".to_string(),
+            instrument: InstrumentConfig::Sample {
+                wav_path: tmp_wav.to_string_lossy().to_string(),
+                root_midi: 60,
+            },
+            fx: vec![],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 72,
+                velocity: 0.85,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let pitched_audio = compile_song(&pitched_song);
+    let telemetry = analyze_audio(
+        &pitched_audio.samples,
+        pitched_audio.sample_rate,
+        pitched_audio.channels,
+        None,
+    );
+    assert!(telemetry.peak_amplitude > 0.2);
+    assert!(telemetry.spectral_bands.high_ratio > 0.6);
+    assert!(!telemetry.is_clipping);
+
+    let _ = std::fs::remove_file(tmp_wav);
+}

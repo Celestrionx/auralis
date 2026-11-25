@@ -1,6 +1,7 @@
 use crate::model::{
     FilterEnvelope, FilterSweepMode, FxConfig, InstrumentConfig, NoteEvent, Song, Track,
 };
+use crate::sampler::render_sample_track;
 use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_modulated_sample};
 use hound::{WavSpec, WavWriter};
@@ -52,6 +53,26 @@ fn render_raw_track(
                 (vec![0.0; total_samples], vec![0.0; total_samples])
             }
         },
+        InstrumentConfig::Sample {
+            wav_path,
+            root_midi,
+        } => match render_sample_track(
+            events,
+            wav_path,
+            *root_midi,
+            sample_rate,
+            sec_per_beat,
+            total_samples,
+        ) {
+            Ok(buffers) => buffers,
+            Err(err) => {
+                eprintln!(
+                    "Warning: Failed to render sample track '{}' ({}): {}",
+                    track.id, wav_path, err
+                );
+                (vec![0.0; total_samples], vec![0.0; total_samples])
+            }
+        },
         InstrumentConfig::Synth { .. } => render_synth_track(
             &track.instrument,
             events,
@@ -90,6 +111,7 @@ fn compile_song_internal(
         let release = match &track.instrument {
             InstrumentConfig::Synth { adsr, .. } => adsr.release_sec,
             InstrumentConfig::SoundFont { .. } => 0.5,
+            InstrumentConfig::Sample { .. } => 0.05,
         };
         for ev in events {
             let note_end = (ev.start_beats + ev.duration_beats) * sec_per_beat + release;
