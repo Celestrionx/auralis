@@ -1,0 +1,162 @@
+{
+  "tempo": 120.0,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 44100,
+  "master_fx": [
+    {
+      "type": "softclip"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "bolt_snap_crack",
+      "instrument": {
+        "waveform": "noise",
+        "adsr": {
+          "attack_sec": 0.001,
+          "decay_sec": 0.08,
+          "sustain_level": 0.0,
+          "release_sec": 0.03
+        }
+      },
+      "fx": [
+        {
+          "type": "highpass",
+          "cutoff_hz": 1800.0
+        },
+        {
+          "type": "saturate",
+          "drive": 2.5
+        },
+        {
+          "type": "delay",
+          "delay_beats": 0.28,
+          "feedback": 0.35,
+          "mix": 0.3
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.88,
+          "damping": 0.4,
+          "mix": 0.45
+        },
+        {
+          "type": "gain",
+          "gain_db": -1.5
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.1,
+          "midi_note": 60,
+          "velocity": 0.98
+        },
+        {
+          "start_beats": 0.14,
+          "duration_beats": 0.08,
+          "midi_note": 60,
+          "velocity": 0.82
+        }
+      ]
+    },
+    {
+      "id": "electric_arc_zap",
+      "instrument": {
+        "waveform": "sawtooth",
+        "adsr": {
+          "attack_sec": 0.001,
+          "decay_sec": 0.09,
+          "sustain_level": 0.0,
+          "release_sec": 0.02
+        },
+        "pitch_env": {
+          "drop_semitones": 42.0,
+          "decay_sec": 0.06
+        },
+        "fm": {
+          "mod_ratio": 3.41,
+          "mod_index": 4.0
+        }
+      },
+      "fx": [
+        {
+          "type": "highpass",
+          "cutoff_hz": 600.0
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.85,
+          "damping": 0.4,
+          "mix": 0.35
+        },
+        {
+          "type": "gain",
+          "gain_db": -5.5
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.12,
+          "midi_note": 72,
+          "velocity": 0.9
+        }
+      ]
+    },
+    {
+      "id": "rolling_thunder_sub",
+      "instrument": {
+        "waveform": "noise",
+        "adsr": {
+          "attack_sec": 0.04,
+          "decay_sec": 2.2,
+          "sustain_level": 0.12,
+          "release_sec": 1.2
+        }
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 155.0,
+          "q": 1.4
+        },
+        {
+          "type": "saturate",
+          "drive": 2.8
+        },
+        {
+          "type": "stereowidth",
+          "width": 1.4
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.94,
+          "damping": 0.65,
+          "mix": 0.55
+        },
+        {
+          "type": "gain",
+          "gain_db": 4.5
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.02,
+          "duration_beats": 3.0,
+          "midi_note": 60,
+          "velocity": 0.95
+        },
+        {
+          "start_beats": 0.85,
+          "duration_beats": 2.2,
+          "midi_note": 60,
+          "velocity": 0.72
+        }
+      ]
+    }
+  ]
+}

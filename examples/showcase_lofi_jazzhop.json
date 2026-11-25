@@ -1,0 +1,546 @@
+{
+  "tempo": 86.0,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 44100,
+  "master_fx": [
+    {
+      "type": "saturate",
+      "drive": 1.3
+    },
+    {
+      "type": "compressor",
+      "threshold_db": -16.0,
+      "ratio": 3.0,
+      "attack_sec": 0.015,
+      "release_sec": 0.18,
+      "makeup_db": 2.0
+    },
+    {
+      "type": "softclip"
+    }
+  ],
+  "patterns": {
+    "rhodes_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 3.8,
+          "midi_note": 50,
+          "chord_notes": [
+            50,
+            53,
+            57,
+            60,
+            64
+          ],
+          "velocity": 0.75
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 3.8,
+          "midi_note": 55,
+          "chord_notes": [
+            53,
+            55,
+            59,
+            62,
+            64
+          ],
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 3.8,
+          "midi_note": 48,
+          "chord_notes": [
+            48,
+            52,
+            55,
+            59,
+            62
+          ],
+          "velocity": 0.76
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.8,
+          "midi_note": 45,
+          "chord_notes": [
+            45,
+            49,
+            55,
+            58,
+            60
+          ],
+          "velocity": 0.74
+        }
+      ]
+    },
+    "upright_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 2.5,
+          "midi_note": 38,
+          "velocity": 0.85
+        },
+        {
+          "start_beats": 2.66,
+          "duration_beats": 1.2,
+          "midi_note": 45,
+          "slide_to_midi": 43,
+          "glide_beats": 0.4,
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 2.5,
+          "midi_note": 43,
+          "velocity": 0.85
+        },
+        {
+          "start_beats": 6.66,
+          "duration_beats": 1.2,
+          "midi_note": 38,
+          "slide_to_midi": 36,
+          "glide_beats": 0.4,
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 2.5,
+          "midi_note": 36,
+          "velocity": 0.85
+        },
+        {
+          "start_beats": 10.66,
+          "duration_beats": 1.2,
+          "midi_note": 43,
+          "velocity": 0.76
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 2.5,
+          "midi_note": 33,
+          "velocity": 0.85
+        },
+        {
+          "start_beats": 14.66,
+          "duration_beats": 1.2,
+          "midi_note": 40,
+          "slide_to_midi": 38,
+          "glide_beats": 0.45,
+          "velocity": 0.8
+        }
+      ]
+    },
+    "boombap_swung_2bar": {
+      "length_beats": 8.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.92
+        },
+        {
+          "start_beats": 1.66,
+          "duration_beats": 0.3,
+          "midi_note": 36,
+          "velocity": 0.76
+        },
+        {
+          "start_beats": 2.5,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.86
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.92
+        },
+        {
+          "start_beats": 6.66,
+          "duration_beats": 0.3,
+          "midi_note": 36,
+          "velocity": 0.8
+        },
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.4,
+          "midi_note": 38,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.4,
+          "midi_note": 38,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 5.0,
+          "duration_beats": 0.4,
+          "midi_note": 38,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 7.0,
+          "duration_beats": 0.4,
+          "midi_note": 38,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 7.66,
+          "duration_beats": 0.2,
+          "midi_note": 37,
+          "velocity": 0.52
+        },
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 0.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 1.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 2.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 2.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 3.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 4.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 5.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 5.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 6.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 6.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        },
+        {
+          "start_beats": 7.0,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.6
+        },
+        {
+          "start_beats": 7.66,
+          "duration_beats": 0.2,
+          "midi_note": 42,
+          "velocity": 0.4
+        }
+      ]
+    },
+    "jazz_piano_lick_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.66,
+          "duration_beats": 1.0,
+          "midi_note": 76,
+          "sustain": true,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 2.0,
+          "duration_beats": 1.5,
+          "midi_note": 74,
+          "sustain": true,
+          "velocity": 0.68
+        },
+        {
+          "start_beats": 4.66,
+          "duration_beats": 1.0,
+          "midi_note": 72,
+          "sustain": true,
+          "velocity": 0.7
+        },
+        {
+          "start_beats": 6.0,
+          "duration_beats": 1.8,
+          "midi_note": 71,
+          "sustain": true,
+          "velocity": 0.66
+        },
+        {
+          "start_beats": 8.66,
+          "duration_beats": 2.5,
+          "midi_note": 72,
+          "sustain": true,
+          "velocity": 0.74
+        },
+        {
+          "start_beats": 12.66,
+          "duration_beats": 2.8,
+          "midi_note": 73,
+          "sustain": true,
+          "velocity": 0.7
+        }
+      ]
+    }
+  },
+  "tracks": [
+    {
+      "id": "fm_rhodes_warble",
+      "instrument": {
+        "waveform": "sine",
+        "adsr": {
+          "attack_sec": 0.015,
+          "decay_sec": 0.5,
+          "sustain_level": 0.45,
+          "release_sec": 0.35
+        },
+        "unison": {
+          "voices": 2,
+          "detune_cents": 7.0,
+          "stereo_spread": 0.7
+        },
+        "lfo": {
+          "rate_hz": 0.42,
+          "depth_semitones": 0.14
+        },
+        "fm": {
+          "mod_ratio": 1.0,
+          "mod_index": 1.25
+        }
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 1800.0
+        },
+        {
+          "type": "stereowidth",
+          "width": 1.35
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.65,
+          "damping": 0.65,
+          "mix": 0.28
+        },
+        {
+          "type": "gain",
+          "gain_db": -3.5
+        },
+        {
+          "type": "pan",
+          "pan": -0.2
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "rhodes_4bar",
+          "start_beats": 0.0,
+          "repeat": 6
+        }
+      ]
+    },
+    {
+      "id": "upright_bass",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 32
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 750.0
+        },
+        {
+          "type": "gain",
+          "gain_db": 1.5
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "upright_4bar",
+          "start_beats": 16.0,
+          "repeat": 5
+        }
+      ]
+    },
+    {
+      "id": "brush_boombap_drums",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 128,
+        "preset": 40
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 6500.0
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.45,
+          "damping": 0.7,
+          "mix": 0.22
+        },
+        {
+          "type": "gain",
+          "gain_db": 2.0
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "boombap_swung_2bar",
+          "start_beats": 16.0,
+          "repeat": 8
+        }
+      ]
+    },
+    {
+      "id": "dusty_piano_lick",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 0
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 2200.0
+        },
+        {
+          "type": "delay",
+          "delay_beats": 0.75,
+          "feedback": 0.3,
+          "mix": 0.18
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.72,
+          "damping": 0.6,
+          "mix": 0.3
+        },
+        {
+          "type": "gain",
+          "gain_db": -1.0
+        },
+        {
+          "type": "pan",
+          "pan": 0.28
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "jazz_piano_lick_4bar",
+          "start_beats": 32.0,
+          "repeat": 2
+        },
+        {
+          "pattern": "jazz_piano_lick_4bar",
+          "start_beats": 64.0,
+          "repeat": 1,
+          "velocity_scale": 0.8
+        }
+      ]
+    },
+    {
+      "id": "vinyl_hiss",
+      "instrument": {
+        "waveform": "noise",
+        "adsr": {
+          "attack_sec": 0.5,
+          "decay_sec": 0.2,
+          "sustain_level": 1.0,
+          "release_sec": 0.5
+        }
+      },
+      "fx": [
+        {
+          "type": "highpass",
+          "cutoff_hz": 4500.0
+        },
+        {
+          "type": "lowpass",
+          "cutoff_hz": 9000.0
+        },
+        {
+          "type": "gain",
+          "gain_db": -31.0
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 96.0,
+          "midi_note": 60,
+          "velocity": 0.5
+        }
+      ]
+    }
+  ]
+}

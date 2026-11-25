@@ -1,0 +1,604 @@
+{
+  "tempo": 118.0,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 44100,
+  "master_fx": [
+    {
+      "type": "compressor",
+      "threshold_db": -14.0,
+      "ratio": 2.5,
+      "attack_sec": 0.01,
+      "release_sec": 0.12,
+      "makeup_db": 1.5
+    },
+    {
+      "type": "softclip"
+    }
+  ],
+  "patterns": {
+    "kick_4ot_1bar": {
+      "length_beats": 4.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.95
+        },
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.95
+        },
+        {
+          "start_beats": 2.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.95
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.4,
+          "midi_note": 36,
+          "velocity": 0.95
+        }
+      ]
+    },
+    "snare_2_4_1bar": {
+      "length_beats": 4.0,
+      "events": [
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.45,
+          "midi_note": 38,
+          "velocity": 0.92
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.45,
+          "midi_note": 38,
+          "velocity": 0.92
+        }
+      ]
+    },
+    "hats_16th_1bar": {
+      "length_beats": 4.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.55
+        },
+        {
+          "start_beats": 0.25,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 0.5,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 0.75,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.55
+        },
+        {
+          "start_beats": 1.25,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 1.5,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 1.75,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 2.0,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.55
+        },
+        {
+          "start_beats": 2.25,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 2.5,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 2.75,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.55
+        },
+        {
+          "start_beats": 3.25,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        },
+        {
+          "start_beats": 3.5,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 3.75,
+          "duration_beats": 0.12,
+          "midi_note": 42,
+          "velocity": 0.35
+        }
+      ]
+    },
+    "fm_bass_1bar": {
+      "length_beats": 4.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.9
+        },
+        {
+          "start_beats": 0.5,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 1.0,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.9
+        },
+        {
+          "start_beats": 1.5,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 2.0,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.9
+        },
+        {
+          "start_beats": 2.5,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 3.0,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.9
+        },
+        {
+          "start_beats": 3.5,
+          "duration_beats": 0.42,
+          "midi_note": 33,
+          "velocity": 0.72
+        }
+      ]
+    },
+    "pad_chords_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 3.9,
+          "midi_note": 57,
+          "chord_notes": [
+            57,
+            60,
+            64,
+            67
+          ],
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 3.9,
+          "midi_note": 53,
+          "chord_notes": [
+            53,
+            57,
+            60,
+            64
+          ],
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 3.9,
+          "midi_note": 48,
+          "chord_notes": [
+            48,
+            52,
+            55,
+            59
+          ],
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.9,
+          "midi_note": 55,
+          "chord_notes": [
+            55,
+            59,
+            62,
+            67
+          ],
+          "velocity": 0.78
+        }
+      ]
+    },
+    "lead_hook_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 1.5,
+          "midi_note": 76,
+          "velocity": 0.85
+        },
+        {
+          "start_beats": 1.5,
+          "duration_beats": 1.0,
+          "midi_note": 79,
+          "velocity": 0.8
+        },
+        {
+          "start_beats": 2.5,
+          "duration_beats": 1.5,
+          "midi_note": 81,
+          "slide_to_midi": 84,
+          "glide_beats": 0.35,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 2.0,
+          "midi_note": 79,
+          "velocity": 0.82
+        },
+        {
+          "start_beats": 6.0,
+          "duration_beats": 2.0,
+          "midi_note": 76,
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 1.5,
+          "midi_note": 72,
+          "velocity": 0.82
+        },
+        {
+          "start_beats": 9.5,
+          "duration_beats": 1.0,
+          "midi_note": 74,
+          "velocity": 0.8
+        },
+        {
+          "start_beats": 10.5,
+          "duration_beats": 1.5,
+          "midi_note": 76,
+          "velocity": 0.86
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.5,
+          "midi_note": 74,
+          "slide_to_midi": 72,
+          "glide_beats": 0.6,
+          "velocity": 0.8
+        }
+      ]
+    }
+  },
+  "tracks": [
+    {
+      "id": "kick",
+      "instrument": {
+        "waveform": "sine",
+        "adsr": {
+          "attack_sec": 0.001,
+          "decay_sec": 0.18,
+          "sustain_level": 0.0,
+          "release_sec": 0.04
+        },
+        "pitch_env": {
+          "drop_semitones": 36.0,
+          "decay_sec": 0.045
+        }
+      },
+      "fx": [
+        {
+          "type": "saturate",
+          "drive": 1.4
+        },
+        {
+          "type": "gain",
+          "gain_db": -2.5
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "kick_4ot_1bar",
+          "start_beats": 16.0,
+          "repeat": 24
+        }
+      ]
+    },
+    {
+      "id": "drums_808",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 128,
+        "preset": 16
+      },
+      "fx": [
+        {
+          "type": "reverb",
+          "room_size": 0.55,
+          "damping": 0.45,
+          "mix": 0.25
+        },
+        {
+          "type": "gain",
+          "gain_db": 1.0
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "snare_2_4_1bar",
+          "start_beats": 16.0,
+          "repeat": 24
+        },
+        {
+          "pattern": "hats_16th_1bar",
+          "start_beats": 32.0,
+          "repeat": 20
+        }
+      ]
+    },
+    {
+      "id": "fm_driving_bass",
+      "instrument": {
+        "waveform": "sawtooth",
+        "adsr": {
+          "attack_sec": 0.003,
+          "decay_sec": 0.14,
+          "sustain_level": 0.45,
+          "release_sec": 0.04
+        },
+        "fm": {
+          "mod_ratio": 1.0,
+          "mod_index": 1.8
+        }
+      },
+      "fx": [
+        {
+          "type": "saturate",
+          "drive": 1.35
+        },
+        {
+          "type": "lowpass",
+          "cutoff_hz": 950.0,
+          "q": 2.2
+        },
+        {
+          "type": "sidechain",
+          "source_track": "kick",
+          "amount": 0.85,
+          "threshold_db": -20.0,
+          "attack_sec": 0.003,
+          "release_sec": 0.14
+        },
+        {
+          "type": "gain",
+          "gain_db": -3.5
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 0.0,
+          "repeat": 4
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 16.0,
+          "repeat": 4
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 32.0,
+          "repeat": 4,
+          "transpose_semitones": -4
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 48.0,
+          "repeat": 4
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 64.0,
+          "repeat": 4,
+          "transpose_semitones": -4
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 80.0,
+          "repeat": 4,
+          "transpose_semitones": -9
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 96.0,
+          "repeat": 4,
+          "transpose_semitones": -2
+        },
+        {
+          "pattern": "fm_bass_1bar",
+          "start_beats": 112.0,
+          "repeat": 4
+        }
+      ]
+    },
+    {
+      "id": "supersaw_pad",
+      "instrument": {
+        "waveform": "sawtooth",
+        "adsr": {
+          "attack_sec": 0.08,
+          "decay_sec": 0.3,
+          "sustain_level": 0.75,
+          "release_sec": 0.25
+        },
+        "unison": {
+          "voices": 5,
+          "detune_cents": 22.0,
+          "stereo_spread": 0.9
+        }
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 2400.0,
+          "q": 1.1
+        },
+        {
+          "type": "stereowidth",
+          "width": 1.5
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.78,
+          "damping": 0.4,
+          "mix": 0.3
+        },
+        {
+          "type": "sidechain",
+          "source_track": "kick",
+          "amount": 0.9,
+          "threshold_db": -20.0,
+          "attack_sec": 0.003,
+          "release_sec": 0.16
+        },
+        {
+          "type": "gain",
+          "gain_db": -5.5
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "pad_chords_4bar",
+          "start_beats": 0.0,
+          "repeat": 8
+        }
+      ]
+    },
+    {
+      "id": "neon_lead",
+      "instrument": {
+        "waveform": "square",
+        "adsr": {
+          "attack_sec": 0.01,
+          "decay_sec": 0.2,
+          "sustain_level": 0.7,
+          "release_sec": 0.18
+        },
+        "unison": {
+          "voices": 3,
+          "detune_cents": 14.0,
+          "stereo_spread": 0.65
+        },
+        "lfo": {
+          "rate_hz": 5.2,
+          "depth_semitones": 0.18
+        }
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 3800.0,
+          "q": 1.4
+        },
+        {
+          "type": "delay",
+          "delay_beats": 0.75,
+          "feedback": 0.42,
+          "mix": 0.28
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.7,
+          "damping": 0.45,
+          "mix": 0.25
+        },
+        {
+          "type": "gain",
+          "gain_db": -5.0
+        },
+        {
+          "type": "pan",
+          "pan": 0.2
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "lead_hook_4bar",
+          "start_beats": 32.0,
+          "repeat": 2
+        },
+        {
+          "pattern": "lead_hook_4bar",
+          "start_beats": 80.0,
+          "repeat": 2
+        }
+      ]
+    }
+  ]
+}

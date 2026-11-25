@@ -1,0 +1,360 @@
+{
+  "tempo": 76.0,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 44100,
+  "loop_points": {
+    "start_beat": 16.0,
+    "end_beat": 80.0
+  },
+  "master_fx": [
+    {
+      "type": "softclip"
+    }
+  ],
+  "patterns": {
+    "piano_pedaled_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 3.9,
+          "midi_note": 40,
+          "chord_notes": [
+            40,
+            52,
+            55,
+            59,
+            64
+          ],
+          "sustain": true,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 3.9,
+          "midi_note": 36,
+          "chord_notes": [
+            36,
+            48,
+            52,
+            55,
+            59
+          ],
+          "sustain": true,
+          "velocity": 0.7
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 3.9,
+          "midi_note": 43,
+          "chord_notes": [
+            43,
+            50,
+            55,
+            59,
+            62
+          ],
+          "sustain": true,
+          "velocity": 0.72
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.9,
+          "midi_note": 45,
+          "chord_notes": [
+            45,
+            52,
+            57,
+            60,
+            64
+          ],
+          "sustain": true,
+          "velocity": 0.7
+        }
+      ]
+    },
+    "violin_portamento_8bar": {
+      "length_beats": 32.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 3.5,
+          "midi_note": 67,
+          "slide_to_midi": 71,
+          "glide_beats": 1.2,
+          "velocity": 0.78
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 3.8,
+          "midi_note": 76,
+          "velocity": 0.84
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 3.5,
+          "midi_note": 74,
+          "slide_to_midi": 71,
+          "glide_beats": 1.0,
+          "velocity": 0.76
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.8,
+          "midi_note": 72,
+          "velocity": 0.8
+        },
+        {
+          "start_beats": 16.0,
+          "duration_beats": 3.5,
+          "midi_note": 71,
+          "slide_to_midi": 74,
+          "glide_beats": 1.0,
+          "velocity": 0.82
+        },
+        {
+          "start_beats": 20.0,
+          "duration_beats": 3.8,
+          "midi_note": 79,
+          "velocity": 0.88
+        },
+        {
+          "start_beats": 24.0,
+          "duration_beats": 3.5,
+          "midi_note": 78,
+          "slide_to_midi": 76,
+          "glide_beats": 1.2,
+          "velocity": 0.8
+        },
+        {
+          "start_beats": 28.0,
+          "duration_beats": 3.8,
+          "midi_note": 71,
+          "velocity": 0.74
+        }
+      ]
+    },
+    "fm_glass_pad_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 7.9,
+          "midi_note": 52,
+          "chord_notes": [
+            52,
+            59,
+            64
+          ],
+          "velocity": 0.58
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 7.9,
+          "midi_note": 55,
+          "chord_notes": [
+            55,
+            62,
+            67
+          ],
+          "velocity": 0.58
+        }
+      ]
+    },
+    "crystal_air_4bar": {
+      "length_beats": 16.0,
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 3.5,
+          "midi_note": 88,
+          "velocity": 0.52
+        },
+        {
+          "start_beats": 4.0,
+          "duration_beats": 3.5,
+          "midi_note": 83,
+          "velocity": 0.48
+        },
+        {
+          "start_beats": 8.0,
+          "duration_beats": 3.5,
+          "midi_note": 86,
+          "velocity": 0.52
+        },
+        {
+          "start_beats": 12.0,
+          "duration_beats": 3.5,
+          "midi_note": 84,
+          "velocity": 0.5
+        }
+      ]
+    }
+  },
+  "tracks": [
+    {
+      "id": "pedaled_grand_piano",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 0
+      },
+      "fx": [
+        {
+          "type": "reverb",
+          "room_size": 0.82,
+          "damping": 0.5,
+          "mix": 0.35
+        },
+        {
+          "type": "gain",
+          "gain_db": -1.5
+        },
+        {
+          "type": "pan",
+          "pan": -0.25
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "piano_pedaled_4bar",
+          "start_beats": 0.0,
+          "repeat": 6
+        }
+      ]
+    },
+    {
+      "id": "expressive_violin",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 40
+      },
+      "fx": [
+        {
+          "type": "delay",
+          "delay_beats": 0.75,
+          "feedback": 0.32,
+          "mix": 0.2
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.85,
+          "damping": 0.45,
+          "mix": 0.38
+        },
+        {
+          "type": "gain",
+          "gain_db": -2.5
+        },
+        {
+          "type": "pan",
+          "pan": 0.22
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "violin_portamento_8bar",
+          "start_beats": 16.0,
+          "repeat": 2
+        }
+      ]
+    },
+    {
+      "id": "fm_glass_shimmer",
+      "instrument": {
+        "waveform": "sine",
+        "adsr": {
+          "attack_sec": 0.6,
+          "decay_sec": 0.5,
+          "sustain_level": 0.75,
+          "release_sec": 0.8
+        },
+        "unison": {
+          "voices": 5,
+          "detune_cents": 16.0,
+          "stereo_spread": 0.95
+        },
+        "lfo": {
+          "rate_hz": 0.25,
+          "depth_semitones": 0.08
+        },
+        "fm": {
+          "mod_ratio": 3.0,
+          "mod_index": 1.15
+        }
+      },
+      "fx": [
+        {
+          "type": "lowpass",
+          "cutoff_hz": 5500.0
+        },
+        {
+          "type": "stereowidth",
+          "width": 1.4
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.9,
+          "damping": 0.35,
+          "mix": 0.45
+        },
+        {
+          "type": "gain",
+          "gain_db": -8.0
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "fm_glass_pad_4bar",
+          "start_beats": 0.0,
+          "repeat": 6
+        }
+      ]
+    },
+    {
+      "id": "crystal_air_chimes",
+      "instrument": {
+        "soundfont_path": "assets/soundfonts/TimGM6mb.sf2",
+        "bank": 0,
+        "preset": 98
+      },
+      "fx": [
+        {
+          "type": "highpass",
+          "cutoff_hz": 2000.0
+        },
+        {
+          "type": "delay",
+          "delay_beats": 1.5,
+          "feedback": 0.45,
+          "mix": 0.35
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.88,
+          "damping": 0.3,
+          "mix": 0.45
+        },
+        {
+          "type": "gain",
+          "gain_db": 1.5
+        },
+        {
+          "type": "pan",
+          "pan": 0.35
+        }
+      ],
+      "clips": [
+        {
+          "pattern": "crystal_air_4bar",
+          "start_beats": 0.0,
+          "repeat": 6
+        }
+      ]
+    }
+  ]
+}

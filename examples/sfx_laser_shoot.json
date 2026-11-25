@@ -1,0 +1,100 @@
+{
+  "tempo": 120.0,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 44100,
+  "master_fx": [
+    {
+      "type": "softclip"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "plasma_beam",
+      "instrument": {
+        "waveform": "sawtooth",
+        "adsr": {
+          "attack_sec": 0.001,
+          "decay_sec": 0.22,
+          "sustain_level": 0.0,
+          "release_sec": 0.05
+        },
+        "pitch_env": {
+          "drop_semitones": 48.0,
+          "decay_sec": 0.16
+        },
+        "unison": {
+          "voices": 3,
+          "detune_cents": 18.0,
+          "stereo_spread": 0.75
+        },
+        "fm": {
+          "mod_ratio": 1.5,
+          "mod_index": 2.8
+        }
+      },
+      "fx": [
+        {
+          "type": "saturate",
+          "drive": 2.0
+        },
+        {
+          "type": "delay",
+          "delay_beats": 0.18,
+          "feedback": 0.3,
+          "mix": 0.22
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.6,
+          "damping": 0.45,
+          "mix": 0.25
+        },
+        {
+          "type": "gain",
+          "gain_db": -2.5
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.35,
+          "midi_note": 64,
+          "velocity": 0.95
+        }
+      ]
+    },
+    {
+      "id": "muzzle_transient",
+      "instrument": {
+        "waveform": "noise",
+        "adsr": {
+          "attack_sec": 0.001,
+          "decay_sec": 0.04,
+          "sustain_level": 0.0,
+          "release_sec": 0.01
+        }
+      },
+      "fx": [
+        {
+          "type": "highpass",
+          "cutoff_hz": 2200.0
+        },
+        {
+          "type": "gain",
+          "gain_db": -4.0
+        }
+      ],
+      "events": [
+        {
+          "start_beats": 0.0,
+          "duration_beats": 0.05,
+          "midi_note": 60,
+          "velocity": 0.9
+        }
+      ]
+    }
+  ]
+}
