@@ -1,4 +1,7 @@
-use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
+use auralis::graph::{
+    compile_song, compile_song_with_stems, compile_stems, export_audio, export_wav,
+    read_wav_loop_points,
+};
 use auralis::mcp::handle_mcp_request;
 use auralis::model::{
     Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
@@ -1050,4 +1053,117 @@ fn test_section_telemetry_crest_factor_and_diagnostics() {
             .contains(&"HIGH_SECTION_VARIANCE".to_string())
     );
     assert!(telemetry.sections[3].rms_dbfs > telemetry.sections[0].rms_dbfs + 18.0);
+}
+
+#[test]
+fn test_compile_stems_parity_and_loop_markers() {
+    let song = Song {
+        tempo: 120.0,
+        loop_points: Some(LoopPoints {
+            start_beat: 0.0,
+            end_beat: Some(2.0),
+        }),
+        tracks: vec![
+            Track {
+                id: "bass".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Sine,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: -0.3 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.0,
+                    duration_beats: 2.0,
+                    midi_note: 36,
+                    velocity: 0.7,
+                    ..Default::default()
+                }],
+            },
+            Track {
+                id: "lead".to_string(),
+                instrument: InstrumentConfig::Synth {
+                    waveform: Waveform::Triangle,
+                    adsr: Adsr::default(),
+                    pitch_env: None,
+                },
+                fx: vec![FxConfig::Pan { pan: 0.3 }],
+                clips: Vec::new(),
+                events: vec![NoteEvent {
+                    start_beats: 0.5,
+                    duration_beats: 1.5,
+                    midi_note: 67,
+                    velocity: 0.6,
+                    ..Default::default()
+                }],
+            },
+        ],
+        ..Default::default()
+    };
+
+    let (full_mix, stems) = compile_song_with_stems(&song);
+    let stems_only = compile_stems(&song);
+    assert_eq!(stems.len(), 2);
+    assert_eq!(stems_only.len(), 2);
+    assert_eq!(stems[0].0, "bass");
+    assert_eq!(stems[1].0, "lead");
+    assert_eq!(stems[0].1.samples.len(), full_mix.samples.len());
+    assert_eq!(stems[1].1.samples.len(), full_mix.samples.len());
+    assert_eq!(stems[0].1.loop_samples, full_mix.loop_samples);
+
+    // Without master_fx, summing stems equals full_mix sample-for-sample
+    for i in 0..full_mix.samples.len() {
+        let summed = stems[0].1.samples[i] + stems[1].1.samples[i];
+        assert!((summed - full_mix.samples[i]).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn test_export_ogg_with_loop_tags_if_ffmpeg_available() {
+    if std::process::Command::new("ffmpeg")
+        .arg("-version")
+        .output()
+        .is_err()
+    {
+        return;
+    }
+
+    let song = Song {
+        tempo: 120.0,
+        loop_points: Some(LoopPoints {
+            start_beat: 1.0,
+            end_beat: Some(3.0),
+        }),
+        tracks: vec![Track {
+            id: "ogg_tone".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr::default(),
+                pitch_env: None,
+            },
+            fx: vec![],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 4.0,
+                midi_note: 60,
+                velocity: 0.7,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let rendered = compile_song(&song);
+    let tmp_ogg = std::env::temp_dir().join("auralis_loop_export_test.ogg");
+    export_audio(&rendered, &tmp_ogg).expect("OGG export failed");
+
+    let bytes = std::fs::read(&tmp_ogg).expect("Read OGG failed");
+    assert!(bytes.starts_with(b"OggS"));
+    let text_lossy = String::from_utf8_lossy(&bytes);
+    assert!(text_lossy.contains("LOOPSTART=22050"));
+    assert!(text_lossy.contains("LOOPLENGTH=44100"));
+
+    let _ = std::fs::remove_file(tmp_ogg);
 }

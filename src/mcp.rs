@@ -1,4 +1,4 @@
-use crate::graph::{compile_song, export_wav, read_wav_loop_points};
+use crate::graph::{compile_song, export_audio, read_wav_loop_points};
 use crate::model::Song;
 use crate::soundfont::get_or_load_soundfont;
 use crate::telemetry::analyze_audio;
@@ -170,13 +170,13 @@ pub fn handle_mcp_request(request: &Value) -> Value {
                                 rendered.channels,
                                 rendered.loop_samples,
                             );
-                            match export_wav(&rendered, wav_path) {
+                            match export_audio(&rendered, wav_path) {
                                 Ok(_) => mcp_text(format!(
                                     "Audio successfully written to {}.\nTelemetry:\n{}",
                                     wav_path,
                                     serde_json::to_string_pretty(&telemetry).unwrap_or_default()
                                 )),
-                                Err(e) => mcp_error(format!("WAV export error: {}", e)),
+                                Err(e) => mcp_error(format!("Audio export error: {}", e)),
                             }
                         }
                         Err(e) => mcp_error(format!("Manifest parse error: {}", e)),

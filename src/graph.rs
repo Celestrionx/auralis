@@ -7,6 +7,10 @@ use std::f32::consts::{FRAC_1_SQRT_2, PI, SQRT_2};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
+use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static TEMP_OGG_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct RenderedAudio {
     pub sample_rate: u32,
@@ -63,7 +67,19 @@ fn render_raw_track(
     }
 }
 
-pub fn compile_song(song: &Song) -> RenderedAudio {
+fn interleave_stereo(left: &[f32], right: &[f32]) -> Vec<f32> {
+    let mut interleaved = Vec::with_capacity(left.len() * 2);
+    for (&l, &r) in left.iter().zip(right.iter()) {
+        interleaved.push(l);
+        interleaved.push(r);
+    }
+    interleaved
+}
+
+fn compile_song_internal(
+    song: &Song,
+    include_stems: bool,
+) -> (RenderedAudio, Vec<(String, RenderedAudio)>) {
     let sample_rate = song.sample_rate.unwrap_or(44100);
     let sec_per_beat = 60.0 / song.tempo.max(1.0);
 
@@ -123,7 +139,6 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
     let sc_targets: HashSet<&str> = song
         .tracks
         .iter()
-        .chain(std::iter::empty())
         .flat_map(|t| t.fx.iter())
         .chain(song.master_fx.iter())
         .filter_map(|fx| match fx {
@@ -160,6 +175,35 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
         }
     });
 
+    let loop_samples = song.loop_points.map(|lp| {
+        let start_sample = (lp.start_beat * sec_per_beat * sample_rate as f32).round() as u32;
+        let end_sample = match lp.end_beat {
+            Some(eb) => (eb * sec_per_beat * sample_rate as f32).round() as u32,
+            None => total_samples as u32,
+        };
+        (start_sample, end_sample)
+    });
+
+    let stems = if include_stems {
+        song.tracks
+            .iter()
+            .zip(track_buffers.iter())
+            .map(|(track, (left, right))| {
+                (
+                    track.id.clone(),
+                    RenderedAudio {
+                        sample_rate,
+                        channels: 2,
+                        samples: interleave_stereo(left, right),
+                        loop_samples,
+                    },
+                )
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+
     let mut master_left = vec![0.0_f32; total_samples];
     let mut master_right = vec![0.0_f32; total_samples];
     for (left, right) in &track_buffers {
@@ -180,28 +224,26 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
         );
     }
 
-    // Interleave left and right into stereo stream
-    let mut interleaved = Vec::with_capacity(total_samples * 2);
-    for i in 0..total_samples {
-        interleaved.push(master_left[i]);
-        interleaved.push(master_right[i]);
-    }
-
-    let loop_samples = song.loop_points.map(|lp| {
-        let start_sample = (lp.start_beat * sec_per_beat * sample_rate as f32).round() as u32;
-        let end_sample = match lp.end_beat {
-            Some(eb) => (eb * sec_per_beat * sample_rate as f32).round() as u32,
-            None => total_samples as u32,
-        };
-        (start_sample, end_sample)
-    });
-
-    RenderedAudio {
+    let full_mix = RenderedAudio {
         sample_rate,
         channels: 2,
-        samples: interleaved,
+        samples: interleave_stereo(&master_left, &master_right),
         loop_samples,
-    }
+    };
+
+    (full_mix, stems)
+}
+
+pub fn compile_song(song: &Song) -> RenderedAudio {
+    compile_song_internal(song, false).0
+}
+
+pub fn compile_stems(song: &Song) -> Vec<(String, RenderedAudio)> {
+    compile_song_internal(song, true).1
+}
+
+pub fn compile_song_with_stems(song: &Song) -> (RenderedAudio, Vec<(String, RenderedAudio)>) {
+    compile_song_internal(song, true)
 }
 
 fn has_spatial_fx(fx_list: &[FxConfig]) -> bool {
@@ -699,6 +741,74 @@ pub fn export_wav<P: AsRef<Path>>(
     }
 
     Ok(())
+}
+
+/// Exports rendered audio as OGG Vorbis via `ffmpeg` (`libvorbis`), embedding
+/// Godot-compatible `LOOPSTART` and `LOOPLENGTH` Vorbis comment tags when loop points exist.
+pub fn export_ogg<P: AsRef<Path>>(
+    audio: &RenderedAudio,
+    path: P,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let seq = TEMP_OGG_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tmp_wav =
+        std::env::temp_dir().join(format!("auralis_ogg_{}_{}.wav", std::process::id(), seq));
+    export_wav(audio, &tmp_wav)?;
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.arg("-y")
+        .arg("-v")
+        .arg("error")
+        .arg("-i")
+        .arg(&tmp_wav)
+        .arg("-c:a")
+        .arg("libvorbis")
+        .arg("-q:a")
+        .arg("5");
+
+    if let Some((start, end)) = audio.loop_samples {
+        let length = end.saturating_sub(start);
+        cmd.arg("-metadata")
+            .arg(format!("LOOPSTART={}", start))
+            .arg("-metadata")
+            .arg(format!("LOOPLENGTH={}", length));
+    }
+
+    let out_path = path.as_ref();
+    cmd.arg(out_path);
+
+    let output = cmd.output();
+    let _ = std::fs::remove_file(&tmp_wav);
+
+    let output = output.map_err(|e| {
+        format!(
+            "Failed to invoke ffmpeg for OGG export ({}): {}",
+            out_path.display(),
+            e
+        )
+    })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("ffmpeg OGG export failed: {}", stderr.trim()).into());
+    }
+
+    Ok(())
+}
+
+/// Exports audio according to output file extension (`.ogg` -> Vorbis, otherwise WAV).
+pub fn export_audio<P: AsRef<Path>>(
+    audio: &RenderedAudio,
+    path: P,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let p = path.as_ref();
+    if p.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("ogg"))
+    {
+        export_ogg(audio, p)
+    } else {
+        export_wav(audio, p)
+    }
 }
 
 fn inject_smpl_chunk(

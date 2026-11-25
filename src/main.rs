@@ -1,4 +1,4 @@
-use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
+use auralis::graph::{compile_song, compile_song_with_stems, export_audio, read_wav_loop_points};
 use auralis::mcp::run_stdio_mcp_server;
 use auralis::model::{
     Adsr, InstrumentConfig, LoopPoints, NoteEvent, PitchEnvelope, Song, Track, Waveform,
@@ -28,9 +28,12 @@ enum Commands {
     Compile {
         /// Input manifest JSON path
         manifest: PathBuf,
-        /// Output WAV path
+        /// Output audio path (.wav or .ogg)
         #[arg(short, long, default_value = "output.wav")]
         output: PathBuf,
+        /// Also export individual equal-length per-track stems alongside output
+        #[arg(long)]
+        stems: bool,
     },
     /// Evaluate an existing WAV file and output auditory telemetry
     Eval {
@@ -131,11 +134,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fs::write(&path, json_str)?;
             println!("Scaffolded song manifest at {}", path.display());
         }
-        Commands::Compile { manifest, output } => {
+        Commands::Compile {
+            manifest,
+            output,
+            stems,
+        } => {
             let content = fs::read_to_string(&manifest)?;
             let song: Song = serde_json::from_str(&content)?;
-            let rendered = compile_song(&song);
-            export_wav(&rendered, &output)?;
+            let (rendered, stem_buffers) = if stems {
+                compile_song_with_stems(&song)
+            } else {
+                (compile_song(&song), Vec::new())
+            };
+            export_audio(&rendered, &output)?;
+            if stems {
+                let parent = output
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .unwrap_or_else(|| std::path::Path::new("."));
+                let base = output
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("output");
+                let ext = output.extension().and_then(|e| e.to_str()).unwrap_or("wav");
+                for (track_id, stem_audio) in &stem_buffers {
+                    let safe_id: String = track_id
+                        .chars()
+                        .map(|c| {
+                            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                                c
+                            } else {
+                                '_'
+                            }
+                        })
+                        .collect();
+                    let stem_path = parent.join(format!("{}_{}.{}", base, safe_id, ext));
+                    export_audio(stem_audio, &stem_path)?;
+                    println!("Exported stem to {}", stem_path.display());
+                }
+            }
             let telemetry = analyze_audio(
                 &rendered.samples,
                 rendered.sample_rate,
