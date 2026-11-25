@@ -1,8 +1,10 @@
 use auralis::graph::{compile_song, export_wav, read_wav_loop_points};
 use auralis::model::{
-    Adsr, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, PitchEnvelope, Song, Track, Waveform,
+    Adsr, Clip, FxConfig, InstrumentConfig, LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song,
+    Track, Waveform,
 };
 use auralis::telemetry::analyze_audio;
+use std::collections::BTreeMap;
 
 #[test]
 fn test_manifest_roundtrip() {
@@ -15,6 +17,7 @@ fn test_manifest_roundtrip() {
             end_beat: Some(7.0),
         }),
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "drum_track".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -33,6 +36,7 @@ fn test_manifest_roundtrip() {
                     q: None,
                 },
             ],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 1.0,
@@ -57,6 +61,7 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "piano_track".to_string(),
             instrument: InstrumentConfig::SoundFont {
@@ -65,6 +70,7 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
                 preset: Some(0),
             },
             fx: vec![FxConfig::Gain { gain_db: -2.0 }],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 1.0,
@@ -97,6 +103,7 @@ fn test_real_soundfont_synthesis() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "grand_piano".to_string(),
             instrument: InstrumentConfig::SoundFont {
@@ -105,6 +112,7 @@ fn test_real_soundfont_synthesis() {
                 preset: Some(0), // Acoustic Grand Piano
             },
             fx: vec![FxConfig::Gain { gain_db: -3.0 }],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 2.0,
@@ -138,6 +146,7 @@ fn test_percussion_synthesis() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![
             Track {
                 id: "kick".to_string(),
@@ -155,6 +164,7 @@ fn test_percussion_synthesis() {
                     }),
                 },
                 fx: vec![],
+                clips: Vec::new(),
                 events: vec![NoteEvent {
                     start_beats: 0.0,
                     duration_beats: 0.5,
@@ -179,6 +189,7 @@ fn test_percussion_synthesis() {
                     cutoff_hz: 1000.0,
                     q: None,
                 }],
+                clips: Vec::new(),
                 events: vec![NoteEvent {
                     start_beats: 1.0,
                     duration_beats: 0.5,
@@ -212,6 +223,7 @@ fn test_stereo_panning_and_chords() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![
             Track {
                 id: "left_chords".to_string(),
@@ -226,6 +238,7 @@ fn test_stereo_panning_and_chords() {
                     pitch_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.8 }],
+                clips: Vec::new(),
                 events: vec![NoteEvent {
                     start_beats: 0.0,
                     duration_beats: 2.0,
@@ -243,6 +256,7 @@ fn test_stereo_panning_and_chords() {
                     pitch_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.8 }],
+                clips: Vec::new(),
                 events: vec![NoteEvent {
                     start_beats: 0.5,
                     duration_beats: 1.0,
@@ -283,6 +297,7 @@ fn test_seamless_loop_metadata_export_and_read() {
             end_beat: Some(12.0), // 6.0 seconds = 264600 samples
         }),
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "ambient_loop".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -291,6 +306,7 @@ fn test_seamless_loop_metadata_export_and_read() {
                 pitch_env: None,
             },
             fx: vec![],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 16.0,
@@ -336,6 +352,7 @@ fn test_portamento_glide_and_phase_continuity() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "glide_bass".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -349,6 +366,7 @@ fn test_portamento_glide_and_phase_continuity() {
                 pitch_env: None,
             },
             fx: vec![],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 1.0,
@@ -384,6 +402,7 @@ fn test_resonant_biquad_saturation_and_master_softclip() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: vec![FxConfig::SoftClip],
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "hot_synth".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -399,6 +418,7 @@ fn test_resonant_biquad_saturation_and_master_softclip() {
                 FxConfig::Saturate { drive: 3.0 },
                 FxConfig::Gain { gain_db: 6.0 },
             ],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 1.0,
@@ -429,6 +449,7 @@ fn test_tempo_delay_and_schroeder_reverb_spatial() {
         sample_rate: Some(44100),
         loop_points: None,
         master_fx: Vec::new(),
+        patterns: BTreeMap::new(),
         tracks: vec![Track {
             id: "ambient_bell".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -453,6 +474,7 @@ fn test_tempo_delay_and_schroeder_reverb_spatial() {
                     mix: 0.35,
                 },
             ],
+            clips: Vec::new(),
             events: vec![NoteEvent {
                 start_beats: 0.0,
                 duration_beats: 0.5,
@@ -490,4 +512,168 @@ fn test_multi_window_spectral_telemetry_past_intro() {
     let telemetry = analyze_audio(&samples, sr as u32, 2, None);
     assert!(telemetry.spectral_bands.high_ratio > 0.7);
     assert!(telemetry.spectral_bands.sub_bass_ratio < 0.15);
+}
+
+#[test]
+fn test_pattern_clip_bit_identical_pcm_parity() {
+    let base_events = vec![
+        NoteEvent {
+            start_beats: 0.0,
+            duration_beats: 0.5,
+            midi_note: 36,
+            velocity: 0.9,
+            ..Default::default()
+        },
+        NoteEvent {
+            start_beats: 1.0,
+            duration_beats: 0.5,
+            midi_note: 43,
+            slide_to_midi: Some(48),
+            glide_beats: Some(0.25),
+            velocity: 0.8,
+            ..Default::default()
+        },
+    ];
+
+    let mut flat_events = Vec::new();
+    for rep in 0..4 {
+        for ev in &base_events {
+            let mut copy = ev.clone();
+            copy.start_beats += rep as f32 * 2.0;
+            flat_events.push(copy);
+        }
+    }
+
+    let instrument = InstrumentConfig::Synth {
+        waveform: Waveform::Sine,
+        adsr: Adsr::default(),
+        pitch_env: None,
+    };
+
+    let flat_song = Song {
+        tempo: 130.0,
+        tracks: vec![Track {
+            id: "bass".to_string(),
+            instrument: instrument.clone(),
+            fx: vec![],
+            clips: Vec::new(),
+            events: flat_events,
+        }],
+        ..Default::default()
+    };
+
+    let mut patterns = BTreeMap::new();
+    patterns.insert(
+        "bass_cell".to_string(),
+        Pattern {
+            length_beats: 2.0,
+            events: base_events,
+        },
+    );
+
+    let pattern_song = Song {
+        tempo: 130.0,
+        patterns,
+        tracks: vec![Track {
+            id: "bass".to_string(),
+            instrument,
+            fx: vec![],
+            clips: vec![Clip {
+                pattern: "bass_cell".to_string(),
+                start_beats: 0.0,
+                repeat: Some(4),
+                transpose_semitones: None,
+                velocity_scale: None,
+            }],
+            events: Vec::new(),
+        }],
+        ..Default::default()
+    };
+
+    let flat_audio = compile_song(&flat_song);
+    let pat_audio = compile_song(&pattern_song);
+    assert_eq!(flat_audio.samples, pat_audio.samples);
+}
+
+#[test]
+fn test_pattern_clip_transpose_velocity_and_roundtrip() {
+    let mut patterns = BTreeMap::new();
+    patterns.insert(
+        "triad_riff".to_string(),
+        Pattern {
+            length_beats: 4.0,
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 48,
+                chord_notes: Some(vec![48, 52, 55]),
+                slide_to_midi: Some(60),
+                glide_beats: Some(0.5),
+                velocity: 0.8,
+            }],
+        },
+    );
+
+    let track = Track {
+        id: "lead".to_string(),
+        instrument: InstrumentConfig::Synth {
+            waveform: Waveform::Triangle,
+            adsr: Adsr::default(),
+            pitch_env: None,
+        },
+        fx: vec![],
+        clips: vec![Clip {
+            pattern: "triad_riff".to_string(),
+            start_beats: 2.0,
+            repeat: Some(2),
+            transpose_semitones: Some(12),
+            velocity_scale: Some(0.5),
+        }],
+        events: Vec::new(),
+    };
+
+    let resolved = track.resolved_events(&patterns);
+    assert_eq!(resolved.len(), 2);
+    assert_eq!(resolved[0].start_beats, 2.0);
+    assert_eq!(resolved[1].start_beats, 6.0);
+    assert_eq!(resolved[0].midi_note, 60);
+    assert_eq!(resolved[0].chord_notes, Some(vec![60, 64, 67]));
+    assert_eq!(resolved[0].slide_to_midi, Some(72));
+    assert!((resolved[0].velocity - 0.4).abs() < 1e-6);
+
+    let song = Song {
+        patterns,
+        tracks: vec![track],
+        ..Default::default()
+    };
+    let json = serde_json::to_string(&song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&json).expect("Deserialize failed");
+    assert_eq!(song, decoded);
+}
+
+#[test]
+fn test_pattern_missing_graceful_fallback() {
+    let song = Song {
+        tracks: vec![Track {
+            id: "broken_ref".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr::default(),
+                pitch_env: None,
+            },
+            fx: vec![],
+            clips: vec![Clip {
+                pattern: "does_not_exist".to_string(),
+                start_beats: 0.0,
+                repeat: Some(2),
+                transpose_semitones: None,
+                velocity_scale: None,
+            }],
+            events: Vec::new(),
+        }],
+        ..Default::default()
+    };
+
+    let rendered = compile_song(&song);
+    assert!(!rendered.samples.is_empty());
 }

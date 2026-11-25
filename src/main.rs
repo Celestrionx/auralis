@@ -5,6 +5,7 @@ use auralis::model::{
 };
 use auralis::telemetry::analyze_audio;
 use clap::{Parser, Subcommand};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -54,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     end_beat: Some(4.0),
                 }),
                 master_fx: Vec::new(),
+                patterns: BTreeMap::new(),
                 tracks: vec![
                     Track {
                         id: "kick_drum".to_string(),
@@ -71,6 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }),
                         },
                         fx: vec![],
+                        clips: Vec::new(),
                         events: vec![
                             NoteEvent {
                                 start_beats: 0.0,
@@ -101,6 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             pitch_env: None,
                         },
                         fx: vec![],
+                        clips: Vec::new(),
                         events: vec![
                             NoteEvent {
                                 start_beats: 0.0,

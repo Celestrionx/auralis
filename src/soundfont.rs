@@ -1,4 +1,4 @@
-use crate::model::Track;
+use crate::model::NoteEvent;
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
 use std::collections::HashMap;
 use std::fs::File;
@@ -25,7 +25,7 @@ pub fn get_or_load_soundfont<P: AsRef<Path>>(
 }
 
 pub fn render_soundfont_track(
-    track: &Track,
+    events: &[NoteEvent],
     soundfont_path: &str,
     bank: Option<u32>,
     preset: Option<u32>,
@@ -53,7 +53,7 @@ pub fn render_soundfont_track(
     }
 
     let mut timeline: Vec<(usize, MidiAction)> = Vec::new();
-    for ev in &track.events {
+    for ev in events {
         let start_sample = (ev.start_beats * sec_per_beat * sample_rate as f32) as usize;
         let duration_samples = (ev.duration_beats * sec_per_beat * sample_rate as f32) as usize;
         let end_sample = start_sample + duration_samples;

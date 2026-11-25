@@ -1,4 +1,4 @@
-use crate::model::{FxConfig, InstrumentConfig, Song, Track};
+use crate::model::{FxConfig, InstrumentConfig, NoteEvent, Song};
 use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_sample};
 use hound::{WavSpec, WavWriter};
@@ -18,13 +18,19 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
     let sample_rate = song.sample_rate.unwrap_or(44100);
     let sec_per_beat = 60.0 / song.tempo.max(1.0);
 
+    let resolved_events: Vec<Vec<NoteEvent>> = song
+        .tracks
+        .iter()
+        .map(|track| track.resolved_events(&song.patterns))
+        .collect();
+
     let mut total_duration_sec = 0.0_f32;
-    for track in &song.tracks {
+    for (track, events) in song.tracks.iter().zip(resolved_events.iter()) {
         let release = match &track.instrument {
             InstrumentConfig::Synth { adsr, .. } => adsr.release_sec,
             InstrumentConfig::SoundFont { .. } => 0.5,
         };
-        for ev in &track.events {
+        for ev in events {
             let note_end = (ev.start_beats + ev.duration_beats) * sec_per_beat + release;
             if note_end > total_duration_sec {
                 total_duration_sec = note_end;
@@ -40,7 +46,7 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
     let mut master_left = vec![0.0_f32; total_samples];
     let mut master_right = vec![0.0_f32; total_samples];
 
-    for (t_idx, track) in song.tracks.iter().enumerate() {
+    for (t_idx, (track, events)) in song.tracks.iter().zip(resolved_events.iter()).enumerate() {
         match &track.instrument {
             InstrumentConfig::SoundFont {
                 soundfont_path,
@@ -48,7 +54,7 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
                 preset,
             } => {
                 let (mut left, mut right) = match render_soundfont_track(
-                    track,
+                    events,
                     soundfont_path,
                     *bank,
                     *preset,
@@ -75,7 +81,8 @@ pub fn compile_song(song: &Song) -> RenderedAudio {
             }
             InstrumentConfig::Synth { .. } => {
                 let track_mono = render_synth_track(
-                    track,
+                    &track.instrument,
+                    events,
                     sample_rate,
                     sec_per_beat,
                     total_samples,
@@ -137,13 +144,14 @@ fn has_spatial_fx(fx_list: &[FxConfig]) -> bool {
 }
 
 fn render_synth_track(
-    track: &Track,
+    instrument: &InstrumentConfig,
+    events: &[NoteEvent],
     sample_rate: u32,
     sec_per_beat: f32,
     total_samples: usize,
     track_seed: u32,
 ) -> Vec<f32> {
-    let (waveform, adsr, pitch_env) = match &track.instrument {
+    let (waveform, adsr, pitch_env) = match instrument {
         InstrumentConfig::Synth {
             waveform,
             adsr,
@@ -157,7 +165,7 @@ fn render_synth_track(
     let two_pi = 2.0 * PI;
     let two_pi_over_sr = two_pi / sample_rate as f32;
 
-    for (ev_idx, ev) in track.events.iter().enumerate() {
+    for (ev_idx, ev) in events.iter().enumerate() {
         let start_sec = ev.start_beats * sec_per_beat;
         let duration_sec = ev.duration_beats * sec_per_beat;
         let glide_dur_sec = ev.glide_beats.unwrap_or(ev.duration_beats).max(0.0001) * sec_per_beat;

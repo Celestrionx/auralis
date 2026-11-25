@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Song {
@@ -10,6 +11,8 @@ pub struct Song {
     pub loop_points: Option<LoopPoints>,
     #[serde(default)]
     pub master_fx: Vec<FxConfig>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub patterns: BTreeMap<String, Pattern>,
     pub tracks: Vec<Track>,
 }
 
@@ -21,6 +24,7 @@ impl Default for Song {
             sample_rate: Some(44100),
             loop_points: None,
             master_fx: Vec::new(),
+            patterns: BTreeMap::new(),
             tracks: Vec::new(),
         }
     }
@@ -34,12 +38,84 @@ pub struct LoopPoints {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Pattern {
+    pub length_beats: f32,
+    pub events: Vec<NoteEvent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Clip {
+    pub pattern: String,
+    pub start_beats: f32,
+    #[serde(default)]
+    pub repeat: Option<u32>,
+    #[serde(default)]
+    pub transpose_semitones: Option<i8>,
+    #[serde(default)]
+    pub velocity_scale: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Track {
     pub id: String,
     pub instrument: InstrumentConfig,
     #[serde(default)]
     pub fx: Vec<FxConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub clips: Vec<Clip>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<NoteEvent>,
+}
+
+fn shift_midi(note: u8, delta: i8) -> u8 {
+    (note as i16 + delta as i16).clamp(0, 127) as u8
+}
+
+impl Track {
+    /// Expands all referenced `clips` from `patterns` and merges them with direct `events`
+    /// in deterministic chronological order.
+    pub fn resolved_events(&self, patterns: &BTreeMap<String, Pattern>) -> Vec<NoteEvent> {
+        let mut out = self.events.clone();
+
+        for clip in &self.clips {
+            let Some(pattern) = patterns.get(&clip.pattern) else {
+                eprintln!(
+                    "Warning: Track '{}' references missing pattern '{}'",
+                    self.id, clip.pattern
+                );
+                continue;
+            };
+
+            let repeats = clip.repeat.unwrap_or(1);
+            let transpose = clip.transpose_semitones.unwrap_or(0);
+            let vel_scale = clip.velocity_scale.unwrap_or(1.0);
+            let step_beats = pattern.length_beats.max(0.0);
+
+            for rep in 0..repeats {
+                let offset = clip.start_beats + (rep as f32) * step_beats;
+                for ev in &pattern.events {
+                    let mut resolved = ev.clone();
+                    resolved.start_beats += offset;
+                    resolved.velocity = (resolved.velocity * vel_scale).clamp(0.0, 1.0);
+                    if transpose != 0 {
+                        resolved.midi_note = shift_midi(resolved.midi_note, transpose);
+                        if let Some(ref mut chord) = resolved.chord_notes {
+                            for n in chord.iter_mut() {
+                                *n = shift_midi(*n, transpose);
+                            }
+                        }
+                        if let Some(slide) = resolved.slide_to_midi {
+                            resolved.slide_to_midi = Some(shift_midi(slide, transpose));
+                        }
+                    }
+                    out.push(resolved);
+                }
+            }
+        }
+
+        out.sort_by(|a, b| a.start_beats.total_cmp(&b.start_beats));
+        out
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
