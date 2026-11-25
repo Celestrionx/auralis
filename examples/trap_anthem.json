@@ -5,6 +5,11 @@
     4
   ],
   "sample_rate": 44100,
+  "master_fx": [
+    {
+      "type": "softclip"
+    }
+  ],
   "tracks": [
     {
       "id": "808_sub",
@@ -19,12 +24,17 @@
       },
       "fx": [
         {
+          "type": "saturate",
+          "drive": 1.6
+        },
+        {
           "type": "lowpass",
-          "cutoff_hz": 150.0
+          "cutoff_hz": 165.0,
+          "q": 0.8
         },
         {
           "type": "gain",
-          "gain_db": -6.5
+          "gain_db": -5.5
         },
         {
           "type": "pan",
@@ -72,7 +82,9 @@
           "start_beats": 39.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 40.0,
@@ -90,7 +102,9 @@
           "start_beats": 42.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 44.0,
@@ -114,7 +128,9 @@
           "start_beats": 47.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 48.0,
@@ -156,7 +172,9 @@
           "start_beats": 55.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 56.0,
@@ -174,7 +192,9 @@
           "start_beats": 58.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 60.0,
@@ -198,7 +218,9 @@
           "start_beats": 63.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 64.0,
@@ -240,7 +262,9 @@
           "start_beats": 71.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 72.0,
@@ -258,7 +282,9 @@
           "start_beats": 74.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 76.0,
@@ -282,7 +308,9 @@
           "start_beats": 79.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 80.0,
@@ -324,7 +352,9 @@
           "start_beats": 87.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 88.0,
@@ -342,7 +372,9 @@
           "start_beats": 90.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 92.0,
@@ -366,7 +398,9 @@
           "start_beats": 95.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 96.0,
@@ -588,7 +622,9 @@
           "start_beats": 167.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 168.0,
@@ -606,7 +642,9 @@
           "start_beats": 170.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 172.0,
@@ -630,7 +668,9 @@
           "start_beats": 175.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 176.0,
@@ -672,7 +712,9 @@
           "start_beats": 183.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 184.0,
@@ -690,7 +732,9 @@
           "start_beats": 186.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 188.0,
@@ -714,7 +758,9 @@
           "start_beats": 191.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 192.0,
@@ -756,7 +802,9 @@
           "start_beats": 199.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 200.0,
@@ -774,7 +822,9 @@
           "start_beats": 202.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 204.0,
@@ -798,7 +848,9 @@
           "start_beats": 207.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 208.0,
@@ -840,7 +892,9 @@
           "start_beats": 215.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 216.0,
@@ -858,7 +912,9 @@
           "start_beats": 218.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 220.0,
@@ -882,7 +938,9 @@
           "start_beats": 223.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 224.0,
@@ -924,7 +982,9 @@
           "start_beats": 231.5,
           "duration_beats": 0.45,
           "midi_note": 37,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 44,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 232.0,
@@ -942,7 +1002,9 @@
           "start_beats": 234.75,
           "duration_beats": 1.0,
           "midi_note": 34,
-          "velocity": 0.86
+          "velocity": 0.86,
+          "slide_to_midi": 46,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 236.0,
@@ -966,7 +1028,9 @@
           "start_beats": 239.5,
           "duration_beats": 0.45,
           "midi_note": 36,
-          "velocity": 0.88
+          "velocity": 0.88,
+          "slide_to_midi": 43,
+          "glide_beats": 0.35
         }
       ]
     },
@@ -983,12 +1047,17 @@
       },
       "fx": [
         {
+          "type": "saturate",
+          "drive": 2.4
+        },
+        {
           "type": "lowpass",
-          "cutoff_hz": 400.0
+          "cutoff_hz": 450.0,
+          "q": 1.1
         },
         {
           "type": "gain",
-          "gain_db": -14.5
+          "gain_db": -13.0
         },
         {
           "type": "pan",
@@ -1036,7 +1105,9 @@
           "start_beats": 39.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 40.0,
@@ -1054,7 +1125,9 @@
           "start_beats": 42.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 44.0,
@@ -1078,7 +1151,9 @@
           "start_beats": 47.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 48.0,
@@ -1120,7 +1195,9 @@
           "start_beats": 55.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 56.0,
@@ -1138,7 +1215,9 @@
           "start_beats": 58.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 60.0,
@@ -1162,7 +1241,9 @@
           "start_beats": 63.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 64.0,
@@ -1204,7 +1285,9 @@
           "start_beats": 71.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 72.0,
@@ -1222,7 +1305,9 @@
           "start_beats": 74.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 76.0,
@@ -1246,7 +1331,9 @@
           "start_beats": 79.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 80.0,
@@ -1288,7 +1375,9 @@
           "start_beats": 87.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 88.0,
@@ -1306,7 +1395,9 @@
           "start_beats": 90.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 92.0,
@@ -1330,7 +1421,9 @@
           "start_beats": 95.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 96.0,
@@ -1552,7 +1645,9 @@
           "start_beats": 167.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 168.0,
@@ -1570,7 +1665,9 @@
           "start_beats": 170.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 172.0,
@@ -1594,7 +1691,9 @@
           "start_beats": 175.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 176.0,
@@ -1636,7 +1735,9 @@
           "start_beats": 183.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 184.0,
@@ -1654,7 +1755,9 @@
           "start_beats": 186.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 188.0,
@@ -1678,7 +1781,9 @@
           "start_beats": 191.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 192.0,
@@ -1720,7 +1825,9 @@
           "start_beats": 199.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 200.0,
@@ -1738,7 +1845,9 @@
           "start_beats": 202.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 204.0,
@@ -1762,7 +1871,9 @@
           "start_beats": 207.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 208.0,
@@ -1804,7 +1915,9 @@
           "start_beats": 215.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 216.0,
@@ -1822,7 +1935,9 @@
           "start_beats": 218.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 220.0,
@@ -1846,7 +1961,9 @@
           "start_beats": 223.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 224.0,
@@ -1888,7 +2005,9 @@
           "start_beats": 231.5,
           "duration_beats": 0.405,
           "midi_note": 49,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 56,
+          "glide_beats": 0.35
         },
         {
           "start_beats": 232.0,
@@ -1906,7 +2025,9 @@
           "start_beats": 234.75,
           "duration_beats": 0.9,
           "midi_note": 46,
-          "velocity": 0.705
+          "velocity": 0.705,
+          "slide_to_midi": 58,
+          "glide_beats": 0.45
         },
         {
           "start_beats": 236.0,
@@ -1930,7 +2051,9 @@
           "start_beats": 239.5,
           "duration_beats": 0.405,
           "midi_note": 60,
-          "velocity": 0.722
+          "velocity": 0.722,
+          "slide_to_midi": 67,
+          "glide_beats": 0.35
         }
       ]
     },
@@ -7621,8 +7744,14 @@
           "cutoff_hz": 1400.0
         },
         {
+          "type": "reverb",
+          "room_size": 0.45,
+          "damping": 0.5,
+          "mix": 0.18
+        },
+        {
           "type": "gain",
-          "gain_db": -9.0
+          "gain_db": -8.5
         },
         {
           "type": "pan",
@@ -11645,6 +11774,12 @@
           "cutoff_hz": 2800.0
         },
         {
+          "type": "reverb",
+          "room_size": 0.65,
+          "damping": 0.55,
+          "mix": 0.22
+        },
+        {
           "type": "gain",
           "gain_db": -1.5
         },
@@ -13509,8 +13644,20 @@
           "cutoff_hz": 450.0
         },
         {
+          "type": "delay",
+          "delay_beats": 0.75,
+          "feedback": 0.35,
+          "mix": 0.2
+        },
+        {
+          "type": "reverb",
+          "room_size": 0.7,
+          "damping": 0.4,
+          "mix": 0.28
+        },
+        {
           "type": "gain",
-          "gain_db": -3.5
+          "gain_db": -3.0
         },
         {
           "type": "pan",

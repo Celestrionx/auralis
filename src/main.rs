@@ -53,6 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     start_beat: 0.0,
                     end_beat: Some(4.0),
                 }),
+                master_fx: Vec::new(),
                 tracks: vec![
                     Track {
                         id: "kick_drum".to_string(),
@@ -75,15 +76,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 start_beats: 0.0,
                                 duration_beats: 1.0,
                                 midi_note: 36, // C2
-                                chord_notes: None,
                                 velocity: 0.9,
+                                ..Default::default()
                             },
                             NoteEvent {
                                 start_beats: 2.0,
                                 duration_beats: 1.0,
                                 midi_note: 36,
-                                chord_notes: None,
                                 velocity: 0.9,
+                                ..Default::default()
                             },
                         ],
                     },
@@ -107,6 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 midi_note: 60,
                                 chord_notes: Some(vec![60, 64, 67]), // C major
                                 velocity: 0.7,
+                                ..Default::default()
                             },
                             NoteEvent {
                                 start_beats: 2.0,
@@ -114,6 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 midi_note: 57,
                                 chord_notes: Some(vec![57, 60, 64]), // A minor
                                 velocity: 0.7,
+                                ..Default::default()
                             },
                         ],
                     },

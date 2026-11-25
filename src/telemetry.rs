@@ -144,8 +144,7 @@ pub fn analyze_audio(
 }
 
 fn calculate_spectral_bands(samples: &[f32], sample_rate: u32) -> SpectralEnergy {
-    let fft_size = 2048.min(samples.len().next_power_of_two());
-    if fft_size < 128 {
+    if samples.len() < 128 {
         return SpectralEnergy {
             sub_bass_ratio: 0.33,
             mid_ratio: 0.33,
@@ -153,36 +152,54 @@ fn calculate_spectral_bands(samples: &[f32], sample_rate: u32) -> SpectralEnergy
         };
     }
 
+    let fft_size = 2048.min(samples.len().next_power_of_two());
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(fft_size);
-
-    let mut buffer: Vec<Complex<f32>> = samples
-        .iter()
-        .take(fft_size)
-        .map(|&s| Complex { re: s, im: 0.0 })
-        .collect();
-
-    while buffer.len() < fft_size {
-        buffer.push(Complex { re: 0.0, im: 0.0 });
-    }
-
-    fft.process(&mut buffer);
-
     let bin_hz = sample_rate as f32 / fft_size as f32;
+
+    let max_windows = 32usize;
+    let window_starts: Vec<usize> = if samples.len() <= fft_size {
+        vec![0]
+    } else {
+        let span = samples.len() - fft_size;
+        let count = max_windows.min((samples.len() / fft_size).max(1));
+        if count <= 1 {
+            vec![0]
+        } else {
+            (0..count).map(|i| (i * span) / (count - 1)).collect()
+        }
+    };
+
     let mut sub_bass_energy = 0.0_f32;
     let mut mid_energy = 0.0_f32;
     let mut high_energy = 0.0_f32;
+    let mut buffer = vec![Complex { re: 0.0, im: 0.0 }; fft_size];
 
-    for (i, c) in buffer.iter().take(fft_size / 2).enumerate() {
-        let freq = i as f32 * bin_hz;
-        let magnitude = (c.re * c.re + c.im * c.im).sqrt();
+    for start in window_starts {
+        for (i, slot) in buffer.iter_mut().enumerate() {
+            // Hann window reduces spectral leakage across arbitrary cut points
+            let hann =
+                0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / fft_size as f32).cos());
+            let s = samples.get(start + i).copied().unwrap_or(0.0);
+            *slot = Complex {
+                re: s * hann,
+                im: 0.0,
+            };
+        }
 
-        if freq <= 250.0 {
-            sub_bass_energy += magnitude;
-        } else if freq <= 4000.0 {
-            mid_energy += magnitude;
-        } else {
-            high_energy += magnitude;
+        fft.process(&mut buffer);
+
+        for (i, c) in buffer.iter().take(fft_size / 2).enumerate() {
+            let freq = i as f32 * bin_hz;
+            let magnitude = (c.re * c.re + c.im * c.im).sqrt();
+
+            if freq <= 250.0 {
+                sub_bass_energy += magnitude;
+            } else if freq <= 4000.0 {
+                mid_energy += magnitude;
+            } else {
+                high_energy += magnitude;
+            }
         }
     }
 

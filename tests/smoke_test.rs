@@ -14,6 +14,7 @@ fn test_manifest_roundtrip() {
             start_beat: 1.0,
             end_beat: Some(7.0),
         }),
+        master_fx: Vec::new(),
         tracks: vec![Track {
             id: "drum_track".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -27,7 +28,10 @@ fn test_manifest_roundtrip() {
             fx: vec![
                 FxConfig::Gain { gain_db: -3.0 },
                 FxConfig::Pan { pan: -0.5 },
-                FxConfig::HighPass { cutoff_hz: 800.0 },
+                FxConfig::HighPass {
+                    cutoff_hz: 800.0,
+                    q: None,
+                },
             ],
             events: vec![NoteEvent {
                 start_beats: 0.0,
@@ -35,6 +39,7 @@ fn test_manifest_roundtrip() {
                 midi_note: 60,
                 chord_notes: Some(vec![60, 64, 67]),
                 velocity: 0.8,
+                ..Default::default()
             }],
         }],
     };
@@ -51,6 +56,7 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
         time_signature: (4, 4),
         sample_rate: Some(44100),
         loop_points: None,
+        master_fx: Vec::new(),
         tracks: vec![Track {
             id: "piano_track".to_string(),
             instrument: InstrumentConfig::SoundFont {
@@ -63,8 +69,8 @@ fn test_soundfont_manifest_roundtrip_and_fallback() {
                 start_beats: 0.0,
                 duration_beats: 1.0,
                 midi_note: 60,
-                chord_notes: None,
                 velocity: 0.8,
+                ..Default::default()
             }],
         }],
     };
@@ -90,6 +96,7 @@ fn test_real_soundfont_synthesis() {
         time_signature: (4, 4),
         sample_rate: Some(44100),
         loop_points: None,
+        master_fx: Vec::new(),
         tracks: vec![Track {
             id: "grand_piano".to_string(),
             instrument: InstrumentConfig::SoundFont {
@@ -104,6 +111,7 @@ fn test_real_soundfont_synthesis() {
                 midi_note: 60,
                 chord_notes: Some(vec![60, 64, 67]), // C Major triad
                 velocity: 0.8,
+                ..Default::default()
             }],
         }],
     };
@@ -129,6 +137,7 @@ fn test_percussion_synthesis() {
         time_signature: (4, 4),
         sample_rate: Some(44100),
         loop_points: None,
+        master_fx: Vec::new(),
         tracks: vec![
             Track {
                 id: "kick".to_string(),
@@ -150,8 +159,8 @@ fn test_percussion_synthesis() {
                     start_beats: 0.0,
                     duration_beats: 0.5,
                     midi_note: 36,
-                    chord_notes: None,
                     velocity: 0.9,
+                    ..Default::default()
                 }],
             },
             Track {
@@ -166,13 +175,16 @@ fn test_percussion_synthesis() {
                     },
                     pitch_env: None,
                 },
-                fx: vec![FxConfig::HighPass { cutoff_hz: 1000.0 }],
+                fx: vec![FxConfig::HighPass {
+                    cutoff_hz: 1000.0,
+                    q: None,
+                }],
                 events: vec![NoteEvent {
                     start_beats: 1.0,
                     duration_beats: 0.5,
                     midi_note: 60,
-                    chord_notes: None,
                     velocity: 0.7,
+                    ..Default::default()
                 }],
             },
         ],
@@ -199,6 +211,7 @@ fn test_stereo_panning_and_chords() {
         time_signature: (4, 4),
         sample_rate: Some(44100),
         loop_points: None,
+        master_fx: Vec::new(),
         tracks: vec![
             Track {
                 id: "left_chords".to_string(),
@@ -219,6 +232,7 @@ fn test_stereo_panning_and_chords() {
                     midi_note: 60,
                     chord_notes: Some(vec![60, 64, 67, 71]), // Cmaj7
                     velocity: 0.7,
+                    ..Default::default()
                 }],
             },
             Track {
@@ -233,8 +247,8 @@ fn test_stereo_panning_and_chords() {
                     start_beats: 0.5,
                     duration_beats: 1.0,
                     midi_note: 72,
-                    chord_notes: None,
                     velocity: 0.6,
+                    ..Default::default()
                 }],
             },
         ],
@@ -268,6 +282,7 @@ fn test_seamless_loop_metadata_export_and_read() {
             start_beat: 4.0,      // 2.0 seconds = 88200 samples
             end_beat: Some(12.0), // 6.0 seconds = 264600 samples
         }),
+        master_fx: Vec::new(),
         tracks: vec![Track {
             id: "ambient_loop".to_string(),
             instrument: InstrumentConfig::Synth {
@@ -280,8 +295,8 @@ fn test_seamless_loop_metadata_export_and_read() {
                 start_beats: 0.0,
                 duration_beats: 16.0,
                 midi_note: 60,
-                chord_notes: None,
                 velocity: 0.7,
+                ..Default::default()
             }],
         }],
     };
@@ -311,4 +326,168 @@ fn test_seamless_loop_metadata_export_and_read() {
     assert!((lt.loop_duration_seconds - 4.0).abs() < 1e-4);
 
     let _ = std::fs::remove_file(tmp_path);
+}
+
+#[test]
+fn test_portamento_glide_and_phase_continuity() {
+    let song = Song {
+        tempo: 120.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        loop_points: None,
+        master_fx: Vec::new(),
+        tracks: vec![Track {
+            id: "glide_bass".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sine,
+                adsr: Adsr {
+                    attack_sec: 0.01,
+                    decay_sec: 0.1,
+                    sustain_level: 0.8,
+                    release_sec: 0.05,
+                },
+                pitch_env: None,
+            },
+            fx: vec![],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 36,
+                slide_to_midi: Some(48),
+                glide_beats: Some(0.5),
+                velocity: 0.85,
+                ..Default::default()
+            }],
+        }],
+    };
+
+    let serialized = serde_json::to_string(&song).expect("Serialize failed");
+    let deserialized: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(song, deserialized);
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.peak_amplitude > 0.3);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_resonant_biquad_saturation_and_master_softclip() {
+    let song = Song {
+        tempo: 120.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        loop_points: None,
+        master_fx: vec![FxConfig::SoftClip],
+        tracks: vec![Track {
+            id: "hot_synth".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sawtooth,
+                adsr: Adsr::default(),
+                pitch_env: None,
+            },
+            fx: vec![
+                FxConfig::LowPass {
+                    cutoff_hz: 1200.0,
+                    q: Some(3.5),
+                },
+                FxConfig::Saturate { drive: 3.0 },
+                FxConfig::Gain { gain_db: 6.0 },
+            ],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 48,
+                chord_notes: Some(vec![48, 55, 60]),
+                velocity: 1.0,
+                ..Default::default()
+            }],
+        }],
+    };
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.peak_amplitude > 0.7);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_tempo_delay_and_schroeder_reverb_spatial() {
+    let song = Song {
+        tempo: 120.0,
+        time_signature: (4, 4),
+        sample_rate: Some(44100),
+        loop_points: None,
+        master_fx: Vec::new(),
+        tracks: vec![Track {
+            id: "ambient_bell".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Triangle,
+                adsr: Adsr {
+                    attack_sec: 0.005,
+                    decay_sec: 0.1,
+                    sustain_level: 0.0,
+                    release_sec: 0.05,
+                },
+                pitch_env: None,
+            },
+            fx: vec![
+                FxConfig::Delay {
+                    delay_beats: 0.5,
+                    feedback: 0.45,
+                    mix: 0.35,
+                },
+                FxConfig::Reverb {
+                    room_size: 0.75,
+                    damping: 0.4,
+                    mix: 0.35,
+                },
+            ],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 0.5,
+                midi_note: 72,
+                velocity: 0.8,
+                ..Default::default()
+            }],
+        }],
+    };
+
+    let rendered = compile_song(&song);
+    // Tail should exceed dry duration (0.25s + 0.05s = 0.3s) due to spatial FX tail
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert!(telemetry.duration_seconds > 1.0);
+    assert!(telemetry.stereo_correlation.unwrap() < 0.99);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_multi_window_spectral_telemetry_past_intro() {
+    // Silent first second, then bright 6 kHz tone later in the track
+    let sr = 44100;
+    let mut samples = vec![0.0_f32; sr * 2 * 2]; // 2 seconds stereo
+    for (i, slot) in samples.iter_mut().enumerate().skip(sr * 2) {
+        let frame = (i - sr * 2) / 2;
+        let t = frame as f32 / sr as f32;
+        *slot = (2.0 * std::f32::consts::PI * 6000.0 * t).sin() * 0.5;
+    }
+
+    let telemetry = analyze_audio(&samples, sr as u32, 2, None);
+    assert!(telemetry.spectral_bands.high_ratio > 0.7);
+    assert!(telemetry.spectral_bands.sub_bass_ratio < 0.15);
 }

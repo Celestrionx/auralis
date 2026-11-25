@@ -8,6 +8,8 @@ pub struct Song {
     pub sample_rate: Option<u32>,
     #[serde(default)]
     pub loop_points: Option<LoopPoints>,
+    #[serde(default)]
+    pub master_fx: Vec<FxConfig>,
     pub tracks: Vec<Track>,
 }
 
@@ -18,6 +20,7 @@ impl Default for Song {
             time_signature: (4, 4),
             sample_rate: Some(44100),
             loop_points: None,
+            master_fx: Vec::new(),
             tracks: Vec::new(),
         }
     }
@@ -109,6 +112,24 @@ pub struct NoteEvent {
     pub chord_notes: Option<Vec<u8>>,
     #[serde(default = "default_velocity")]
     pub velocity: f32,
+    #[serde(default)]
+    pub slide_to_midi: Option<u8>,
+    #[serde(default)]
+    pub glide_beats: Option<f32>,
+}
+
+impl Default for NoteEvent {
+    fn default() -> Self {
+        Self {
+            start_beats: 0.0,
+            duration_beats: 1.0,
+            midi_note: 60,
+            chord_notes: None,
+            velocity: default_velocity(),
+            slide_to_midi: None,
+            glide_beats: None,
+        }
+    }
 }
 
 fn default_velocity() -> f32 {
@@ -136,8 +157,34 @@ impl NoteEvent {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum FxConfig {
-    Gain { gain_db: f32 },
-    LowPass { cutoff_hz: f32 },
-    HighPass { cutoff_hz: f32 },
-    Pan { pan: f32 },
+    Gain {
+        gain_db: f32,
+    },
+    LowPass {
+        cutoff_hz: f32,
+        #[serde(default)]
+        q: Option<f32>,
+    },
+    HighPass {
+        cutoff_hz: f32,
+        #[serde(default)]
+        q: Option<f32>,
+    },
+    Pan {
+        pan: f32,
+    },
+    Saturate {
+        drive: f32,
+    },
+    SoftClip,
+    Delay {
+        delay_beats: f32,
+        feedback: f32,
+        mix: f32,
+    },
+    Reverb {
+        room_size: f32,
+        damping: f32,
+        mix: f32,
+    },
 }
