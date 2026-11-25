@@ -1130,6 +1130,24 @@ fn test_section_telemetry_crest_factor_and_diagnostics() {
             .contains(&"HIGH_SECTION_VARIANCE".to_string())
     );
     assert!(telemetry.sections[3].rms_dbfs > telemetry.sections[0].rms_dbfs + 18.0);
+
+    // Warm dark acoustic-like balance (0.01 <= high_ratio < 0.05) should not false-positive DULL_HIGH_END
+    let mut warm_samples = vec![0.0_f32; sr * 2];
+    for frame in 0..sr {
+        let t = frame as f32 / sr as f32;
+        let val = (2.0 * std::f32::consts::PI * 220.0 * t).sin() * 0.5
+            + (2.0 * std::f32::consts::PI * 5200.0 * t).sin() * 0.02;
+        warm_samples[frame * 2] = val;
+        warm_samples[frame * 2 + 1] = val;
+    }
+    let warm_telemetry = analyze_audio(&warm_samples, sr as u32, 2, None);
+    assert!(warm_telemetry.spectral_bands.high_ratio >= 0.01);
+    assert!(warm_telemetry.spectral_bands.high_ratio < 0.05);
+    assert!(
+        !warm_telemetry
+            .diagnostics
+            .contains(&"DULL_HIGH_END".to_string())
+    );
 }
 
 #[test]

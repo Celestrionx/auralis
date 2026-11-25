@@ -181,7 +181,7 @@ fn build_diagnostics(
     if rms_dbfs > -40.0 && spectral_bands.sub_bass_ratio > 0.65 {
         flags.push("SUB_BASS_DOMINANT".to_string());
     }
-    if rms_dbfs > -40.0 && spectral_bands.high_ratio < 0.05 {
+    if rms_dbfs > -40.0 && spectral_bands.high_ratio < 0.01 {
         flags.push("DULL_HIGH_END".to_string());
     }
     if rms_dbfs > -18.0 && crest_factor_db < 4.0 {
