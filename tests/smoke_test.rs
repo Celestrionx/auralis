@@ -4,8 +4,8 @@ use auralis::graph::{
 };
 use auralis::mcp::handle_mcp_request;
 use auralis::model::{
-    Adsr, Clip, FmConfig, FxConfig, InstrumentConfig, LfoConfig, LoopPoints, NoteEvent, Pattern,
-    PitchEnvelope, Song, Track, UnisonConfig, Waveform,
+    Adsr, Clip, FilterEnvelope, FilterSweepMode, FmConfig, FxConfig, InstrumentConfig, LfoConfig,
+    LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
 use auralis::telemetry::analyze_audio;
 use serde_json::{Value, json};
@@ -35,6 +35,7 @@ fn test_manifest_roundtrip() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![
                 FxConfig::Gain { gain_db: -3.0 },
@@ -173,6 +174,7 @@ fn test_percussion_synthesis() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![],
                 clips: Vec::new(),
@@ -198,6 +200,7 @@ fn test_percussion_synthesis() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::HighPass {
                     cutoff_hz: 1000.0,
@@ -253,6 +256,7 @@ fn test_stereo_panning_and_chords() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.8 }],
                 clips: Vec::new(),
@@ -274,6 +278,7 @@ fn test_stereo_panning_and_chords() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.8 }],
                 clips: Vec::new(),
@@ -327,6 +332,7 @@ fn test_seamless_loop_metadata_export_and_read() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -390,6 +396,7 @@ fn test_portamento_glide_and_phase_continuity() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -438,6 +445,7 @@ fn test_resonant_biquad_saturation_and_master_softclip() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![
                 FxConfig::LowPass {
@@ -493,6 +501,7 @@ fn test_tempo_delay_and_schroeder_reverb_spatial() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![
                 FxConfig::Delay {
@@ -583,6 +592,7 @@ fn test_pattern_clip_bit_identical_pcm_parity() {
         unison: None,
         lfo: None,
         fm: None,
+        filter_env: None,
     };
 
     let flat_song = Song {
@@ -659,6 +669,7 @@ fn test_pattern_clip_transpose_velocity_and_roundtrip() {
             unison: None,
             lfo: None,
             fm: None,
+            filter_env: None,
         },
         fx: vec![],
         clips: vec![Clip {
@@ -702,6 +713,7 @@ fn test_pattern_missing_graceful_fallback() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![],
             clips: vec![Clip {
@@ -801,6 +813,7 @@ fn test_mcp_tools_list_inspect_soundfont_and_eval_wav() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -865,6 +878,7 @@ fn test_sidechain_ducking_attenuation() {
             unison: None,
             lfo: None,
             fm: None,
+            filter_env: None,
         },
         fx: vec![FxConfig::Sidechain {
             source_track: "kick".to_string(),
@@ -900,6 +914,7 @@ fn test_sidechain_ducking_attenuation() {
             unison: None,
             lfo: None,
             fm: None,
+            filter_env: None,
         },
         fx: vec![FxConfig::Gain { gain_db: -40.0 }], // silent in mix, raw trigger still active!
         clips: Vec::new(),
@@ -957,6 +972,7 @@ fn test_sidechain_ducking_attenuation() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Gain { gain_db: -40.0 }],
                 clips: Vec::new(),
@@ -982,6 +998,7 @@ fn test_sidechain_ducking_attenuation() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Sidechain {
                     source_track: "kick".to_string(),
@@ -1019,6 +1036,7 @@ fn test_compressor_and_stereo_width_mid_side() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.9 }],
                 clips: Vec::new(),
@@ -1039,6 +1057,7 @@ fn test_compressor_and_stereo_width_mid_side() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.9 }],
                 clips: Vec::new(),
@@ -1131,6 +1150,7 @@ fn test_compile_stems_parity_and_loop_markers() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: -0.3 }],
                 clips: Vec::new(),
@@ -1151,6 +1171,7 @@ fn test_compile_stems_parity_and_loop_markers() {
                     unison: None,
                     lfo: None,
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Pan { pan: 0.3 }],
                 clips: Vec::new(),
@@ -1208,6 +1229,7 @@ fn test_export_ogg_with_loop_tags_if_ffmpeg_available() {
                 unison: None,
                 lfo: None,
                 fm: None,
+                filter_env: None,
             },
             fx: vec![],
             clips: Vec::new(),
@@ -1256,6 +1278,7 @@ fn test_synth_unison_lfo_and_fm_synthesis() {
                         depth_semitones: 0.25,
                     }),
                     fm: None,
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Gain { gain_db: -3.0 }],
                 clips: Vec::new(),
@@ -1284,6 +1307,7 @@ fn test_synth_unison_lfo_and_fm_synthesis() {
                         mod_ratio: 2.0,
                         mod_index: 2.5,
                     }),
+                    filter_env: None,
                 },
                 fx: vec![FxConfig::Gain { gain_db: -4.0 }],
                 clips: Vec::new(),
@@ -1361,5 +1385,125 @@ fn test_soundfont_pitch_bend_and_cc64_sustain() {
         None,
     );
     assert!(telemetry.peak_amplitude > 0.01);
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_bandpass_and_filter_sweep() {
+    // 2.0s white noise swept from 150 Hz to 7000 Hz via BandPass FilterSweep
+    let sweep_song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "noise_sweep".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Noise,
+                adsr: Adsr {
+                    attack_sec: 0.01,
+                    decay_sec: 0.1,
+                    sustain_level: 0.9,
+                    release_sec: 0.05,
+                },
+                pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
+                filter_env: None,
+            },
+            fx: vec![
+                FxConfig::BandPass {
+                    cutoff_hz: 1500.0,
+                    q: 0.8,
+                },
+                FxConfig::FilterSweep {
+                    start_hz: 150.0,
+                    end_hz: 7000.0,
+                    start_beat: 0.0,
+                    end_beat: 4.0,
+                    q: 1.5,
+                    mode: FilterSweepMode::LowPass,
+                },
+            ],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 4.0,
+                midi_note: 60,
+                velocity: 0.8,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let serialized = serde_json::to_string(&sweep_song).expect("Serialize failed");
+    let decoded: Song = serde_json::from_str(&serialized).expect("Deserialize failed");
+    assert_eq!(sweep_song, decoded);
+
+    let rendered = compile_song(&sweep_song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert_eq!(telemetry.sections.len(), 4);
+    assert!(
+        telemetry.sections[3].spectral_bands.high_ratio
+            > telemetry.sections[0].spectral_bands.high_ratio
+    );
+    assert!(!telemetry.is_clipping);
+}
+
+#[test]
+fn test_per_note_filter_envelope_pluck() {
+    let song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "acid_pluck".to_string(),
+            instrument: InstrumentConfig::Synth {
+                waveform: Waveform::Sawtooth,
+                adsr: Adsr {
+                    attack_sec: 0.002,
+                    decay_sec: 0.2,
+                    sustain_level: 0.8,
+                    release_sec: 0.05,
+                },
+                pitch_env: None,
+                unison: None,
+                lfo: None,
+                fm: None,
+                filter_env: Some(FilterEnvelope {
+                    start_cutoff_hz: 6000.0,
+                    end_cutoff_hz: 180.0,
+                    decay_sec: 0.35,
+                    q: 2.5,
+                }),
+            },
+            fx: vec![FxConfig::Gain { gain_db: -6.0 }],
+            clips: Vec::new(),
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 2.0,
+                midi_note: 48,
+                chord_notes: Some(vec![48, 55, 60]),
+                velocity: 0.65,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        None,
+    );
+    assert_eq!(telemetry.sections.len(), 4);
+    assert!(
+        telemetry.sections[0].spectral_bands.high_ratio
+            > telemetry.sections[3].spectral_bands.high_ratio
+    );
     assert!(!telemetry.is_clipping);
 }

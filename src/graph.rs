@@ -1,4 +1,6 @@
-use crate::model::{FxConfig, InstrumentConfig, NoteEvent, Song, Track};
+use crate::model::{
+    FilterEnvelope, FilterSweepMode, FxConfig, InstrumentConfig, NoteEvent, Song, Track,
+};
 use crate::soundfont::render_soundfont_track;
 use crate::synth::{DeterministicNoise, calculate_envelope, generate_modulated_sample};
 use hound::{WavSpec, WavWriter};
@@ -254,7 +256,7 @@ fn render_synth_track(
     total_samples: usize,
     track_seed: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let (waveform, adsr, pitch_env, unison, lfo, fm) = match instrument {
+    let (waveform, adsr, pitch_env, unison, lfo, fm, filter_env) = match instrument {
         InstrumentConfig::Synth {
             waveform,
             adsr,
@@ -262,6 +264,7 @@ fn render_synth_track(
             unison,
             lfo,
             fm,
+            filter_env,
         } => (
             *waveform,
             adsr,
@@ -269,6 +272,7 @@ fn render_synth_track(
             unison.as_ref(),
             lfo.as_ref(),
             fm.as_ref(),
+            filter_env.as_ref(),
         ),
         _ => return (vec![0.0; total_samples], vec![0.0; total_samples]),
     };
@@ -312,14 +316,28 @@ fn render_synth_track(
         let note_total_sec = duration_sec + adsr.release_sec;
         let note_total_samples = (note_total_sec * sample_rate as f32).ceil() as usize;
         let end_sample = (start_sample + note_total_samples).min(total_samples);
+        let note_len = end_sample.saturating_sub(start_sample);
+        if note_len == 0 {
+            continue;
+        }
+
+        let mut note_l = if filter_env.is_some() {
+            vec![0.0_f32; note_len]
+        } else {
+            Vec::new()
+        };
+        let mut note_r = if filter_env.is_some() {
+            vec![0.0_f32; note_len]
+        } else {
+            Vec::new()
+        };
 
         for &midi in &notes {
             for (v_idx, &(detune_semi, pan_l, pan_r)) in voice_params.iter().enumerate() {
                 let mut phase = (v_idx as f32 / voice_count as f32) * two_pi;
                 let mut mod_phase = 0.0_f32;
 
-                for offset in 0..(end_sample - start_sample) {
-                    let s_idx = start_sample + offset;
+                for offset in 0..note_len {
                     let t = offset as f32 / sample_rate as f32;
 
                     let base_midi = if let Some(target_midi) = ev.slide_to_midi {
@@ -360,9 +378,23 @@ fn render_synth_track(
                     }
                     let env = calculate_envelope(t, duration_sec, adsr);
                     let mono_val = raw_sample * env * velocity_per_voice;
-                    left_buf[s_idx] += mono_val * pan_l;
-                    right_buf[s_idx] += mono_val * pan_r;
+                    if filter_env.is_some() {
+                        note_l[offset] += mono_val * pan_l;
+                        note_r[offset] += mono_val * pan_r;
+                    } else {
+                        let s_idx = start_sample + offset;
+                        left_buf[s_idx] += mono_val * pan_l;
+                        right_buf[s_idx] += mono_val * pan_r;
+                    }
                 }
+            }
+        }
+
+        if let Some(fe) = filter_env {
+            apply_filter_envelope(&mut note_l, &mut note_r, sample_rate, fe);
+            for offset in 0..note_len {
+                left_buf[start_sample + offset] += note_l[offset];
+                right_buf[start_sample + offset] += note_r[offset];
             }
         }
 
@@ -370,6 +402,36 @@ fn render_synth_track(
     }
 
     (left_buf, right_buf)
+}
+
+fn rbj_biquad_coeffs(
+    sample_rate: u32,
+    cutoff_hz: f32,
+    q: f32,
+    mode: FilterSweepMode,
+) -> (f32, f32, f32, f32, f32) {
+    let nyquist_guard = (sample_rate as f32 * 0.45).max(100.0);
+    let freq = cutoff_hz.clamp(20.0, nyquist_guard);
+    let q_clamped = q.clamp(0.1, 20.0);
+    let w0 = 2.0 * PI * freq / sample_rate as f32;
+    let cos_w0 = w0.cos();
+    let alpha = w0.sin() / (2.0 * q_clamped);
+    let a0 = 1.0 + alpha;
+
+    let (b0, b1, b2) = match mode {
+        FilterSweepMode::LowPass => {
+            let c = (1.0 - cos_w0) * 0.5;
+            (c / a0, (1.0 - cos_w0) / a0, c / a0)
+        }
+        FilterSweepMode::HighPass => {
+            let c = (1.0 + cos_w0) * 0.5;
+            (c / a0, -(1.0 + cos_w0) / a0, c / a0)
+        }
+        FilterSweepMode::BandPass => (alpha / a0, 0.0, -alpha / a0),
+    };
+    let a1 = (-2.0 * cos_w0) / a0;
+    let a2 = (1.0 - alpha) / a0;
+    (b0, b1, b2, a1, a2)
 }
 
 fn apply_biquad_channel(samples: &mut [f32], b0: f32, b1: f32, b2: f32, a1: f32, a2: f32) {
@@ -391,28 +453,103 @@ fn apply_biquad_filter(
     sample_rate: u32,
     cutoff_hz: f32,
     q: f32,
-    is_highpass: bool,
+    mode: FilterSweepMode,
 ) {
-    let nyquist_guard = (sample_rate as f32 * 0.45).max(100.0);
-    let freq = cutoff_hz.clamp(20.0, nyquist_guard);
-    let q_clamped = q.clamp(0.1, 20.0);
-    let w0 = 2.0 * PI * freq / sample_rate as f32;
-    let cos_w0 = w0.cos();
-    let alpha = w0.sin() / (2.0 * q_clamped);
-    let a0 = 1.0 + alpha;
-
-    let (b0, b1, b2) = if is_highpass {
-        let c = (1.0 + cos_w0) * 0.5;
-        (c / a0, -(1.0 + cos_w0) / a0, c / a0)
-    } else {
-        let c = (1.0 - cos_w0) * 0.5;
-        (c / a0, (1.0 - cos_w0) / a0, c / a0)
-    };
-    let a1 = (-2.0 * cos_w0) / a0;
-    let a2 = (1.0 - alpha) / a0;
-
+    let (b0, b1, b2, a1, a2) = rbj_biquad_coeffs(sample_rate, cutoff_hz, q, mode);
     apply_biquad_channel(left, b0, b1, b2, a1, a2);
     apply_biquad_channel(right, b0, b1, b2, a1, a2);
+}
+
+fn apply_time_varying_biquad<F>(
+    left: &mut [f32],
+    right: &mut [f32],
+    sample_rate: u32,
+    q: f32,
+    mode: FilterSweepMode,
+    block_size: usize,
+    cutoff_at: F,
+) where
+    F: Fn(usize) -> f32,
+{
+    let (mut lx1, mut lx2, mut ly1, mut ly2) = (0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32);
+    let (mut rx1, mut rx2, mut ry1, mut ry2) = (0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32);
+    let (mut b0, mut b1, mut b2, mut a1, mut a2) =
+        rbj_biquad_coeffs(sample_rate, cutoff_at(0), q, mode);
+
+    for (i, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
+        if i > 0 && i % block_size == 0 {
+            (b0, b1, b2, a1, a2) = rbj_biquad_coeffs(sample_rate, cutoff_at(i), q, mode);
+        }
+        let lx0 = *l;
+        let ly0 = b0 * lx0 + b1 * lx1 + b2 * lx2 - a1 * ly1 - a2 * ly2;
+        lx2 = lx1;
+        lx1 = lx0;
+        ly2 = ly1;
+        ly1 = ly0;
+        *l = ly0;
+
+        let rx0 = *r;
+        let ry0 = b0 * rx0 + b1 * rx1 + b2 * rx2 - a1 * ry1 - a2 * ry2;
+        rx2 = rx1;
+        rx1 = rx0;
+        ry2 = ry1;
+        ry1 = ry0;
+        *r = ry0;
+    }
+}
+
+fn apply_filter_envelope(
+    left: &mut [f32],
+    right: &mut [f32],
+    sample_rate: u32,
+    fe: &FilterEnvelope,
+) {
+    let start_hz = fe.start_cutoff_hz.max(20.0);
+    let end_hz = fe.end_cutoff_hz.max(20.0);
+    let decay = fe.decay_sec.max(0.001);
+    let ratio = end_hz / start_hz;
+    apply_time_varying_biquad(
+        left,
+        right,
+        sample_rate,
+        fe.q,
+        FilterSweepMode::LowPass,
+        16,
+        |i| {
+            let t = i as f32 / sample_rate as f32;
+            let frac = (t / decay).clamp(0.0, 1.0);
+            start_hz * ratio.powf(frac)
+        },
+    );
+}
+
+struct FilterSweepParams {
+    start_hz: f32,
+    end_hz: f32,
+    start_beat: f32,
+    end_beat: f32,
+    q: f32,
+    mode: FilterSweepMode,
+}
+
+fn apply_filter_sweep(
+    left: &mut [f32],
+    right: &mut [f32],
+    sample_rate: u32,
+    sec_per_beat: f32,
+    params: FilterSweepParams,
+) {
+    let s0 = params.start_hz.max(20.0);
+    let e0 = params.end_hz.max(20.0);
+    let ratio = e0 / s0;
+    let start_sec = params.start_beat * sec_per_beat;
+    let span_sec = ((params.end_beat - params.start_beat) * sec_per_beat).max(0.001);
+
+    apply_time_varying_biquad(left, right, sample_rate, params.q, params.mode, 32, |i| {
+        let t = i as f32 / sample_rate as f32;
+        let frac = ((t - start_sec) / span_sec).clamp(0.0, 1.0);
+        s0 * ratio.powf(frac)
+    });
 }
 
 fn apply_stereo_delay(
@@ -615,7 +752,14 @@ fn apply_stereo_fx(
             }
             FxConfig::LowPass { cutoff_hz, q } => {
                 if let Some(q_val) = q {
-                    apply_biquad_filter(left, right, sample_rate, *cutoff_hz, *q_val, false);
+                    apply_biquad_filter(
+                        left,
+                        right,
+                        sample_rate,
+                        *cutoff_hz,
+                        *q_val,
+                        FilterSweepMode::LowPass,
+                    );
                 } else {
                     let rc = 1.0 / (2.0 * PI * cutoff_hz.max(10.0));
                     let dt = 1.0 / sample_rate as f32;
@@ -636,7 +780,14 @@ fn apply_stereo_fx(
             }
             FxConfig::HighPass { cutoff_hz, q } => {
                 if let Some(q_val) = q {
-                    apply_biquad_filter(left, right, sample_rate, *cutoff_hz, *q_val, true);
+                    apply_biquad_filter(
+                        left,
+                        right,
+                        sample_rate,
+                        *cutoff_hz,
+                        *q_val,
+                        FilterSweepMode::HighPass,
+                    );
                 } else {
                     let rc = 1.0 / (2.0 * PI * cutoff_hz.max(10.0));
                     let dt = 1.0 / sample_rate as f32;
@@ -755,6 +906,39 @@ fn apply_stereo_fx(
                     *l = mid + side;
                     *r = mid - side;
                 }
+            }
+            FxConfig::BandPass { cutoff_hz, q } => {
+                apply_biquad_filter(
+                    left,
+                    right,
+                    sample_rate,
+                    *cutoff_hz,
+                    *q,
+                    FilterSweepMode::BandPass,
+                );
+            }
+            FxConfig::FilterSweep {
+                start_hz,
+                end_hz,
+                start_beat,
+                end_beat,
+                q,
+                mode,
+            } => {
+                apply_filter_sweep(
+                    left,
+                    right,
+                    sample_rate,
+                    sec_per_beat,
+                    FilterSweepParams {
+                        start_hz: *start_hz,
+                        end_hz: *end_hz,
+                        start_beat: *start_beat,
+                        end_beat: *end_beat,
+                        q: *q,
+                        mode: *mode,
+                    },
+                );
             }
         }
     }

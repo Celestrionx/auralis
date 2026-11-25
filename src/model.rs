@@ -140,7 +140,31 @@ pub enum InstrumentConfig {
         lfo: Option<LfoConfig>,
         #[serde(default)]
         fm: Option<FmConfig>,
+        #[serde(default)]
+        filter_env: Option<FilterEnvelope>,
     },
+}
+
+fn default_filter_q() -> f32 {
+    1.0
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct FilterEnvelope {
+    pub start_cutoff_hz: f32,
+    pub end_cutoff_hz: f32,
+    pub decay_sec: f32,
+    #[serde(default = "default_filter_q")]
+    pub q: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum FilterSweepMode {
+    #[default]
+    LowPass,
+    HighPass,
+    BandPass,
 }
 
 fn default_unison_stereo_spread() -> f32 {
@@ -338,5 +362,20 @@ pub enum FxConfig {
     },
     StereoWidth {
         width: f32,
+    },
+    BandPass {
+        cutoff_hz: f32,
+        #[serde(default = "default_filter_q")]
+        q: f32,
+    },
+    FilterSweep {
+        start_hz: f32,
+        end_hz: f32,
+        start_beat: f32,
+        end_beat: f32,
+        #[serde(default = "default_filter_q")]
+        q: f32,
+        #[serde(default)]
+        mode: FilterSweepMode,
     },
 }
