@@ -35,4 +35,4 @@ cargo run -- serve
 ```
 
 ## Examples
-Explore [examples/](examples/) for multi-genre BGM showcases (`showcase_synthwave.json`, `showcase_lofi_jazzhop.json`, `showcase_edm_future_bass.json`, `showcase_cinematic_ambient.json`, `trap_anthem.json`, `uk_drill_dark.json`) and procedural SFX (`sfx_door_close.json`, `sfx_lightning_thunder.json`, `sfx_laser_shoot.json`).
+Explore [examples/](examples/) for multi-genre BGM showcases (`showcase_synthwave.json`, `showcase_power_metal.json`, `showcase_lofi_jazzhop.json`, `showcase_edm_future_bass.json`, `showcase_cinematic_ambient.json`, `trap_anthem.json`, `uk_drill_dark.json`) and procedural SFX (`sfx_door_close.json`, `sfx_lightning_thunder.json`, `sfx_laser_shoot.json`).

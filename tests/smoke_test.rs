@@ -1794,3 +1794,44 @@ fn test_mcp_skills_prompts_resources_and_prelint_tool() {
     assert_eq!(lint_val["passed"], json!(true));
     assert!(lint_val["quality_score"].as_u64().unwrap() >= 90);
 }
+
+#[test]
+fn test_showcase_power_metal_dual_gate_metrics() {
+    let json_str = std::fs::read_to_string("examples/showcase_power_metal.json")
+        .expect("Failed to read examples/showcase_power_metal.json");
+    let song: Song = serde_json::from_str(&json_str).expect("Valid showcase_power_metal.json");
+
+    // Gate 1: Pre-render intelligence
+    let audit = analyze_manifest(&song);
+    assert!(
+        audit.passed,
+        "Power metal prelint failed: {:?}",
+        audit.findings
+    );
+    assert_eq!(audit.quality_score, 100);
+    assert!(audit.findings.is_empty());
+
+    // Gate 2: Compiled acoustic & stereo telemetry (requires bundled TimGM6mb.sf2)
+    if !std::path::Path::new("assets/soundfonts/TimGM6mb.sf2").exists() {
+        return;
+    }
+    let rendered = compile_song(&song);
+    let telemetry = analyze_audio(
+        &rendered.samples,
+        rendered.sample_rate,
+        rendered.channels,
+        rendered.loop_samples,
+    );
+    assert!(!telemetry.is_clipping);
+    assert!(telemetry.peak_dbfs < -0.5);
+    assert!(telemetry.rms_dbfs > -16.5);
+    assert!(telemetry.side_to_mid_ratio.unwrap_or(0.0) > 0.25);
+    assert!(telemetry.stereo_correlation.unwrap_or(0.0) > 0.3);
+    assert!(telemetry.spectral_bands.mid_ratio > 0.50);
+    assert!(telemetry.spectral_bands.high_ratio > 0.10);
+    assert!(
+        telemetry.diagnostics.is_empty(),
+        "Unexpected diagnostics: {:?}",
+        telemetry.diagnostics
+    );
+}
