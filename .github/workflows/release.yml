@@ -9,8 +9,28 @@ permissions:
   contents: write
 
 jobs:
+  prepare-soundfont:
+    name: Prepare TimGM6mb SoundFont
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install TimGM6mb SoundFont
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y timgm6mb-soundfont
+          mkdir -p sf2
+          cp /usr/share/sounds/sf2/TimGM6mb.sf2 sf2/TimGM6mb.sf2
+          sha256sum sf2/TimGM6mb.sf2
+
+      - name: Upload SoundFont Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: timgm6mb-sf2
+          path: sf2/TimGM6mb.sf2
+          retention-days: 1
+
   build:
     name: Build (${{ matrix.target_name }})
+    needs: prepare-soundfont
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -48,12 +68,18 @@ jobs:
       - name: Build Release Binary
         run: cargo build --release --target ${{ matrix.rust_target }}
 
+      - name: Download Bundled SoundFont
+        uses: actions/download-artifact@v4
+        with:
+          name: timgm6mb-sf2
+          path: stage/assets/soundfonts
+
       - name: Package Binary & Bundled SoundFont
         shell: bash
         run: |
-          mkdir -p stage/assets/soundfonts dist
+          mkdir -p dist
+          test -f stage/assets/soundfonts/TimGM6mb.sf2
           cp "target/${{ matrix.rust_target }}/release/${{ matrix.bin_name }}" stage/
-          cp assets/soundfonts/TimGM6mb.sf2 stage/assets/soundfonts/
           cp README.md LICENSE stage/
           archive="auralis-${{ matrix.target_name }}.${{ matrix.archive_ext }}"
           if [ "${{ matrix.archive_ext }}" = "zip" ]; then
@@ -78,6 +104,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: auralis-*
           path: dist
           merge-multiple: true
 

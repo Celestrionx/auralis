@@ -1696,6 +1696,7 @@ fn test_prelint_catches_generic_slop_and_passes_archetypes() {
     assert!(codes.contains(&"INVALID_LOOP_RANGE"));
 
     // 2. All 5 archetypes pass pre-render intelligence cleanly
+    let sf2_present = resolve_asset_path("assets/soundfonts/TimGM6mb.sf2").exists();
     for archetype in [
         Archetype::Synthwave,
         Archetype::Ambient,
@@ -1705,13 +1706,21 @@ fn test_prelint_catches_generic_slop_and_passes_archetypes() {
     ] {
         let song = build_archetype_song(archetype, None);
         let arch_audit = analyze_manifest(&song);
+        let non_asset_findings: Vec<_> = arch_audit
+            .findings
+            .iter()
+            .filter(|f| sf2_present || f.code != "MISSING_ASSET_FILE")
+            .collect();
         assert!(
-            arch_audit.passed,
+            non_asset_findings.is_empty(),
             "Archetype {} failed prelint: {:?}",
             archetype.as_str(),
-            arch_audit.findings
+            non_asset_findings
         );
-        assert!(arch_audit.quality_score >= 90);
+        if sf2_present || archetype != Archetype::Orchestral {
+            assert!(arch_audit.passed);
+            assert!(arch_audit.quality_score >= 90);
+        }
     }
 
     assert!(parse_archetype(Some("unknown")).is_err());
@@ -1802,20 +1811,26 @@ fn test_showcase_power_metal_dual_gate_metrics() {
         .expect("Failed to read examples/showcase_power_metal.json");
     let song: Song = serde_json::from_str(&json_str).expect("Valid showcase_power_metal.json");
 
-    // Gate 1: Pre-render intelligence
+    // Gate 1: Pre-render intelligence (allow MISSING_ASSET_FILE only when gitignored SF2 is absent)
+    let sf2_present = resolve_asset_path("assets/soundfonts/TimGM6mb.sf2").exists();
     let audit = analyze_manifest(&song);
+    let non_asset_findings: Vec<_> = audit
+        .findings
+        .iter()
+        .filter(|f| sf2_present || f.code != "MISSING_ASSET_FILE")
+        .collect();
     assert!(
-        audit.passed,
+        non_asset_findings.is_empty(),
         "Power metal prelint failed: {:?}",
-        audit.findings
+        non_asset_findings
     );
-    assert_eq!(audit.quality_score, 100);
-    assert!(audit.findings.is_empty());
 
     // Gate 2: Compiled acoustic & stereo telemetry (requires bundled TimGM6mb.sf2)
-    if !std::path::Path::new("assets/soundfonts/TimGM6mb.sf2").exists() {
+    if !sf2_present {
         return;
     }
+    assert!(audit.passed);
+    assert_eq!(audit.quality_score, 100);
     let rendered = compile_song(&song);
     let telemetry = analyze_audio(
         &rendered.samples,
