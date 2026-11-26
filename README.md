@@ -2,16 +2,17 @@
   <img src="doc/assets/auralis-logo.png" alt="Auralis logo" width="180" />
 </p>
 
-<h1 align="center">Auralis (<code>v0.2.0</code>)</h1>
+<h1 align="center">Auralis (<code>v0.2.1</code>)</h1>
 
 <p align="center">
-  Headless Audio Graph Compiler &amp; Auditory Telemetry Engine in pure Rust for autonomous AI agents.
+  Headless Audio Graph Compiler &amp; Auditory Telemetry Engine in pure Rust for autonomous AI agents.<br />
+  <a href="https://www.celestrionx.com/#demos">Listen to Live Compiled Showcases →</a>
 </p>
 
 ## For AI Agents
 See [AGENTS.md](AGENTS.md) for crate layout, exact commands, architectural boundaries, and git workflow, [DESIGN.md](DESIGN.md) for invariants, [skills/](skills/) for anti-generic composition & sound-design skills, and [doc/adr/](doc/adr/) for Architecture Decision Records (`ADR-0001` through `ADR-0018`).
 
-## Capabilities (`v0.2.0`)
+## Capabilities (`v0.2.1`)
 - **Declarative Composition**: JSON/YAML `Song` manifests with reusable `Pattern` definitions, track `Clip` scheduling (`repeat`, `transpose_semitones`, `velocity_scale`), chords, portamento (`slide_to_midi`), and seamless `LoopPoints`.
 - **Pre-Render Intelligence & Skills**: Static `<1 ms` manifest linting (`auralis lint` / `auralis_lint_manifest`) catching flat velocities, bare oscillators, missing `Pattern`/`Clip` reuse, and low-end masking before synthesis, paired with archetype scaffolding (`init --archetype`) and 4 embedded composition/SFX skills.
 - **Three Synthesis Backends**:

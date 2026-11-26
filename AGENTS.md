@@ -6,7 +6,7 @@
 - Headless Audio Graph Compiler and Auditory Telemetry Engine in pure Rust for autonomous agents.
 - Compiles declarative music manifests (JSON/YAML) into rendered audio (WAV) and extracts quantitative acoustic metrics (Peak, RMS, FFT spectral energy) for closed-loop agent composition.
 - Single source of truth for agents: this file + DESIGN.md (pointer below) + doc/adr/ (decision history).
-- Status: v0.2.0 (pre-1.0).
+- Status: v0.2.1 (pre-1.0).
 
 ## Map
 - `src/` — crate source:
