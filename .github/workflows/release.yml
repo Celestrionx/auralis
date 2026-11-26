@@ -45,7 +45,7 @@ jobs:
             target_name: darwin-arm64
             archive_ext: tar.gz
             bin_name: auralis
-          - runner: macos-13
+          - runner: macos-latest
             rust_target: x86_64-apple-darwin
             target_name: darwin-amd64
             archive_ext: tar.gz
