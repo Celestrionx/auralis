@@ -1,9 +1,44 @@
 use crate::graph::{compile_song, export_audio, read_wav_loop_points};
 use crate::model::Song;
+use crate::prelint::{analyze_manifest, build_archetype_song, parse_archetype};
 use crate::soundfont::get_or_load_soundfont;
 use crate::telemetry::analyze_audio;
 use serde_json::{Value, json};
 use std::io::{self, BufRead, Write};
+
+struct SkillEntry {
+    name: &'static str,
+    uri: &'static str,
+    description: &'static str,
+    body: &'static str,
+}
+
+const SKILLS: &[SkillEntry] = &[
+    SkillEntry {
+        name: "auralis-compose",
+        uri: "auralis://skills/auralis-compose",
+        description: "Prevent generic AI music via Pattern/Clip arrangement, dynamic velocity phrasing, syncopation, and register separation.",
+        body: include_str!("../skills/auralis-compose/SKILL.md"),
+    },
+    SkillEntry {
+        name: "auralis-sound-design",
+        uri: "auralis://skills/auralis-sound-design",
+        description: "Replace dry oscillator beeps with unison/FM/filter envelopes, SoundFont presets, Sample layering, and Sidechain/FX depth.",
+        body: include_str!("../skills/auralis-sound-design/SKILL.md"),
+    },
+    SkillEntry {
+        name: "auralis-pre-intel-and-telemetry",
+        uri: "auralis://skills/auralis-pre-intel-and-telemetry",
+        description: "Run Auralis dual-gate verification: static pre-render manifest lint before synthesis and closed-loop telemetry evaluation after compile.",
+        body: include_str!("../skills/auralis-pre-intel-and-telemetry/SKILL.md"),
+    },
+    SkillEntry {
+        name: "auralis-sfx-foley",
+        uri: "auralis://skills/auralis-sfx-foley",
+        description: "Synthesize 3-layer procedural game SFX and bar-aligned game audio loops with RIFF smpl and OGG Vorbis tags.",
+        body: include_str!("../skills/auralis-sfx-foley/SKILL.md"),
+    },
+];
 
 fn mcp_error(message: impl Into<String>) -> Value {
     json!({
@@ -77,10 +112,108 @@ pub fn handle_mcp_request(request: &Value) -> Value {
                     "version": env!("CARGO_PKG_VERSION")
                 },
                 "capabilities": {
-                    "tools": {}
+                    "tools": {},
+                    "prompts": {},
+                    "resources": {}
                 }
             }
         }),
+        "prompts/list" => {
+            let prompts: Vec<Value> = SKILLS
+                .iter()
+                .map(|s| {
+                    json!({
+                        "name": s.name,
+                        "description": s.description,
+                        "arguments": []
+                    })
+                })
+                .collect();
+            json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": { "prompts": prompts }
+            })
+        }
+        "prompts/get" => {
+            let name = request
+                .get("params")
+                .and_then(|p| p.get("name"))
+                .and_then(|n| n.as_str())
+                .unwrap_or("");
+            if let Some(skill) = SKILLS.iter().find(|s| s.name == name) {
+                json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "description": skill.description,
+                        "messages": [{
+                            "role": "user",
+                            "content": {
+                                "type": "text",
+                                "text": skill.body
+                            }
+                        }]
+                    }
+                })
+            } else {
+                json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32602,
+                        "message": format!("Unknown prompt/skill: {}", name)
+                    }
+                })
+            }
+        }
+        "resources/list" => {
+            let resources: Vec<Value> = SKILLS
+                .iter()
+                .map(|s| {
+                    json!({
+                        "uri": s.uri,
+                        "name": s.name,
+                        "description": s.description,
+                        "mimeType": "text/markdown"
+                    })
+                })
+                .collect();
+            json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": { "resources": resources }
+            })
+        }
+        "resources/read" => {
+            let uri = request
+                .get("params")
+                .and_then(|p| p.get("uri"))
+                .and_then(|u| u.as_str())
+                .unwrap_or("");
+            if let Some(skill) = SKILLS.iter().find(|s| s.uri == uri) {
+                json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "contents": [{
+                            "uri": skill.uri,
+                            "mimeType": "text/markdown",
+                            "text": skill.body
+                        }]
+                    }
+                })
+            } else {
+                json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32602,
+                        "message": format!("Unknown resource URI: {}", uri)
+                    }
+                })
+            }
+        }
         "tools/list" => json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -88,17 +221,33 @@ pub fn handle_mcp_request(request: &Value) -> Value {
                 "tools": [
                     {
                         "name": "auralis_init_manifest",
-                        "description": "Scaffold a baseline declarative song manifest in JSON",
+                        "description": "Scaffold a non-generic declarative song manifest from a rich archetype (synthwave, ambient, drill, orchestral, sfx_impact). Read auralis://skills/auralis-compose before editing.",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
-                                "tempo": { "type": "number", "default": 120.0 }
+                                "archetype": {
+                                    "type": "string",
+                                    "enum": ["synthwave", "ambient", "drill", "orchestral", "sfx_impact"],
+                                    "default": "synthwave"
+                                },
+                                "tempo": { "type": "number" }
                             }
                         }
                     },
                     {
+                        "name": "auralis_lint_manifest",
+                        "description": "Run fast (<1ms) pre-render intelligence checks on a song manifest BEFORE synthesizing PCM audio, catching flat velocities, bare oscillators, missing Pattern/Clip structure, and mix collisions.",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "manifest_json": { "type": "string" }
+                            },
+                            "required": ["manifest_json"]
+                        }
+                    },
+                    {
                         "name": "auralis_compile_audio",
-                        "description": "Compile a declarative song manifest into a WAV file and return telemetry",
+                        "description": "Compile a declarative song manifest into a WAV/OGG file and return both pre-render lint audit and post-render auditory telemetry",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -141,15 +290,31 @@ pub fn handle_mcp_request(request: &Value) -> Value {
 
             let tool_result = match tool_name {
                 "auralis_init_manifest" => {
-                    let tempo = arguments
+                    let archetype_arg = arguments.get("archetype").and_then(|a| a.as_str());
+                    let tempo_override = arguments
                         .get("tempo")
                         .and_then(|t| t.as_f64())
-                        .unwrap_or(120.0) as f32;
-                    let song = Song {
-                        tempo,
-                        ..Song::default()
-                    };
-                    mcp_text(serde_json::to_string_pretty(&song).unwrap_or_default())
+                        .map(|t| t as f32);
+                    match parse_archetype(archetype_arg) {
+                        Ok(archetype) => {
+                            let song = build_archetype_song(archetype, tempo_override);
+                            mcp_text(serde_json::to_string_pretty(&song).unwrap_or_default())
+                        }
+                        Err(e) => mcp_error(e),
+                    }
+                }
+                "auralis_lint_manifest" => {
+                    let manifest_str = arguments
+                        .get("manifest_json")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("");
+                    match serde_json::from_str::<Song>(manifest_str) {
+                        Ok(song) => {
+                            let audit = analyze_manifest(&song);
+                            mcp_text(serde_json::to_string_pretty(&audit).unwrap_or_default())
+                        }
+                        Err(e) => mcp_error(format!("Manifest parse error: {}", e)),
+                    }
                 }
                 "auralis_compile_audio" => {
                     let manifest_str = arguments
@@ -163,6 +328,7 @@ pub fn handle_mcp_request(request: &Value) -> Value {
 
                     match serde_json::from_str::<Song>(manifest_str) {
                         Ok(song) => {
+                            let pre_audit = analyze_manifest(&song);
                             let rendered = compile_song(&song);
                             let telemetry = analyze_audio(
                                 &rendered.samples,
@@ -172,8 +338,9 @@ pub fn handle_mcp_request(request: &Value) -> Value {
                             );
                             match export_audio(&rendered, wav_path) {
                                 Ok(_) => mcp_text(format!(
-                                    "Audio successfully written to {}.\nTelemetry:\n{}",
+                                    "Audio successfully written to {}.\nPre-Lint:\n{}\nTelemetry:\n{}",
                                     wav_path,
+                                    serde_json::to_string_pretty(&pre_audit).unwrap_or_default(),
                                     serde_json::to_string_pretty(&telemetry).unwrap_or_default()
                                 )),
                                 Err(e) => mcp_error(format!("Audio export error: {}", e)),

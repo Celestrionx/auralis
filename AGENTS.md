@@ -15,15 +15,17 @@
   - `synth.rs` — headless tone/percussion generators, unison stereo spread, LFO, 2-op FM, filter/pitch envelopes, ADSR.
   - `soundfont.rs` — cached SF2 acoustic synthesizer (`rustysynth`) with pitch bend and CC64 damper sustain.
   - `sampler.rs` — cached WAV one-shot and pitched/glide sample playback instrument.
+  - `prelint.rs` — deterministic pre-render manifest intelligence (`analyze_manifest`) and non-generic starter archetypes.
   - `telemetry.rs` — auditory telemetry engine (RMS, peak dBFS, crest factor, stereo correlation, 32-window Hann FFT, sections, diagnostics).
-  - `mcp.rs` — Model Context Protocol stdio tool server (`init`, `compile`, `inspect_soundfont`, `eval_wav`).
-  - `lib.rs` — public library API exposing compiler, sampler, soundfont inspection, and telemetry routines.
-  - `main.rs` — CLI entrypoint (`init`, `compile`, `eval`, `serve`).
+  - `mcp.rs` — Model Context Protocol stdio server (`init`, `lint`, `compile`, `inspect_soundfont`, `eval_wav`, plus `prompts`/`resources` exposing `skills/`).
+  - `lib.rs` — public library API exposing compiler, pre-lint intelligence, sampler, soundfont inspection, and telemetry routines.
+  - `main.rs` — CLI entrypoint (`init`, `lint`, `compile`, `eval`, `serve`).
+- `skills/` — compositional & sound-design anti-slop skills (`auralis-compose`, `auralis-sound-design`, `auralis-pre-intel-and-telemetry`, `auralis-sfx-foley`).
 - `examples/` — declarative song & procedural SFX manifests (`showcase_*.json`, `sfx_*.json`, `trap_anthem.json`, `uk_drill_dark.json`).
 - `tests/` — integration and smoke tests:
-  - `smoke_test.rs` — audio rendering, DSP, exporter, MCP, and telemetry validation suite.
+  - `smoke_test.rs` — audio rendering, DSP, pre-lint, exporter, MCP, and telemetry validation suite.
 - `DESIGN.md` — architectural invariants and non-goals. NOT auto-loaded; read before structural changes.
-- `doc/adr/` — immutable architecture decision records (`ADR-0001`–`ADR-0016`). Append-only, never edit in-place.
+- `doc/adr/` — immutable architecture decision records (`ADR-0001`–`ADR-0017`). Append-only, never edit in-place.
 - `.opencode/` — agent config: permissions, reviewer subagent, start/status commands.
 
 ## Commands (exact; verified)
@@ -32,7 +34,8 @@
 - Lint: `cargo clippy --all-targets` (exit 0; zero warnings permitted)
 - Format: `cargo fmt`, verify with `cargo fmt --check` (exit 0)
 - Run CLI: `cargo run -- <command> [args]`
-  - Scaffold manifest: `cargo run -- init demo.json`
+  - Scaffold archetype manifest: `cargo run -- init demo.json [--archetype synthwave|ambient|drill|orchestral|sfx_impact]`
+  - Pre-render intelligence lint: `cargo run -- lint demo.json [--strict]`
   - Compile audio & optional stems: `cargo run -- compile demo.json -o output.wav [--stems]`
   - Evaluate telemetry: `cargo run -- eval output.wav`
   - Run MCP server: `cargo run -- serve`

@@ -7,6 +7,7 @@ use auralis::model::{
     Adsr, Clip, FilterEnvelope, FilterSweepMode, FmConfig, FxConfig, InstrumentConfig, LfoConfig,
     LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
+use auralis::prelint::{Archetype, analyze_manifest, build_archetype_song, parse_archetype};
 use auralis::telemetry::analyze_audio;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -1625,4 +1626,171 @@ fn test_wav_sample_instrument_roundtrip_fallback_and_pitch_shift() {
     assert!(!telemetry.is_clipping);
 
     let _ = std::fs::remove_file(tmp_wav);
+}
+
+#[test]
+fn test_prelint_catches_generic_slop_and_passes_archetypes() {
+    // 1. Sloppy manifest with flat velocity, bare oscillators, missing patterns, center stack,
+    //    uncarved low end, missing master dynamics, and invalid loop range
+    let bare_synth = InstrumentConfig::Synth {
+        waveform: Waveform::Sine,
+        adsr: Adsr::default(),
+        pitch_env: None,
+        unison: None,
+        lfo: None,
+        fm: None,
+        filter_env: None,
+    };
+    let flat_events: Vec<NoteEvent> = (0..12)
+        .map(|i| NoteEvent {
+            start_beats: i as f32 * 0.5,
+            duration_beats: 0.4,
+            midi_note: 40,
+            velocity: 0.8,
+            ..Default::default()
+        })
+        .collect();
+    let sloppy_song = Song {
+        tempo: 120.0,
+        loop_points: Some(LoopPoints {
+            start_beat: 8.0,
+            end_beat: Some(4.0),
+        }),
+        tracks: vec![
+            Track {
+                id: "bass_a".to_string(),
+                instrument: bare_synth.clone(),
+                fx: vec![],
+                clips: vec![],
+                events: flat_events.clone(),
+            },
+            Track {
+                id: "bass_b".to_string(),
+                instrument: bare_synth.clone(),
+                fx: vec![],
+                clips: vec![],
+                events: flat_events.clone(),
+            },
+            Track {
+                id: "lead".to_string(),
+                instrument: bare_synth,
+                fx: vec![],
+                clips: vec![],
+                events: flat_events,
+            },
+        ],
+        ..Default::default()
+    };
+
+    let audit = analyze_manifest(&sloppy_song);
+    let codes: Vec<&str> = audit.findings.iter().map(|f| f.code.as_str()).collect();
+    assert!(!audit.passed);
+    assert!(audit.quality_score < 50);
+    assert!(codes.contains(&"FLAT_VELOCITY"));
+    assert!(codes.contains(&"BARE_SYNTH_TIMBRE"));
+    assert!(codes.contains(&"MISSING_PATTERN_REUSE"));
+    assert!(codes.contains(&"CENTER_STACKED_MIX"));
+    assert!(codes.contains(&"UNCARVED_LOW_END"));
+    assert!(codes.contains(&"MISSING_MASTER_DYNAMICS"));
+    assert!(codes.contains(&"INVALID_LOOP_RANGE"));
+
+    // 2. All 5 archetypes pass pre-render intelligence cleanly
+    for archetype in [
+        Archetype::Synthwave,
+        Archetype::Ambient,
+        Archetype::Drill,
+        Archetype::Orchestral,
+        Archetype::SfxImpact,
+    ] {
+        let song = build_archetype_song(archetype, None);
+        let arch_audit = analyze_manifest(&song);
+        assert!(
+            arch_audit.passed,
+            "Archetype {} failed prelint: {:?}",
+            archetype.as_str(),
+            arch_audit.findings
+        );
+        assert!(arch_audit.quality_score >= 90);
+    }
+
+    assert!(parse_archetype(Some("unknown")).is_err());
+}
+
+#[test]
+fn test_mcp_skills_prompts_resources_and_prelint_tool() {
+    let init_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "initialize"
+    }));
+    assert!(init_resp["result"]["capabilities"]["prompts"].is_object());
+    assert!(init_resp["result"]["capabilities"]["resources"].is_object());
+
+    let prompts_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "prompts/list"
+    }));
+    let prompt_names: Vec<&str> = prompts_resp["result"]["prompts"]
+        .as_array()
+        .expect("prompts array")
+        .iter()
+        .filter_map(|p| p["name"].as_str())
+        .collect();
+    assert!(prompt_names.contains(&"auralis-compose"));
+    assert!(prompt_names.contains(&"auralis-sound-design"));
+    assert!(prompt_names.contains(&"auralis-pre-intel-and-telemetry"));
+    assert!(prompt_names.contains(&"auralis-sfx-foley"));
+
+    let prompt_get = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "prompts/get",
+        "params": { "name": "auralis-compose" }
+    }));
+    let prompt_text = prompt_get["result"]["messages"][0]["content"]["text"]
+        .as_str()
+        .expect("prompt text");
+    assert!(prompt_text.contains("Anti-Slop"));
+
+    let resources_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "resources/read",
+        "params": { "uri": "auralis://skills/auralis-pre-intel-and-telemetry" }
+    }));
+    let res_text = resources_resp["result"]["contents"][0]["text"]
+        .as_str()
+        .expect("resource text");
+    assert!(res_text.contains("auralis_lint_manifest"));
+
+    let init_manifest = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_init_manifest",
+            "arguments": { "archetype": "drill" }
+        }
+    }));
+    let manifest_json = init_manifest["result"]["content"][0]["text"]
+        .as_str()
+        .expect("manifest text");
+
+    let lint_resp = handle_mcp_request(&json!({
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "tools/call",
+        "params": {
+            "name": "auralis_lint_manifest",
+            "arguments": { "manifest_json": manifest_json }
+        }
+    }));
+    assert!(lint_resp["result"]["isError"].is_null());
+    let lint_text = lint_resp["result"]["content"][0]["text"]
+        .as_str()
+        .expect("lint json");
+    let lint_val: Value = serde_json::from_str(lint_text).expect("valid lint json");
+    assert_eq!(lint_val["passed"], json!(true));
+    assert!(lint_val["quality_score"].as_u64().unwrap() >= 90);
 }

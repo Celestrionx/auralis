@@ -1,11 +1,9 @@
 use auralis::graph::{compile_song, compile_song_with_stems, export_audio, read_wav_loop_points};
 use auralis::mcp::run_stdio_mcp_server;
-use auralis::model::{
-    Adsr, InstrumentConfig, LoopPoints, NoteEvent, PitchEnvelope, Song, Track, Waveform,
-};
+use auralis::model::Song;
+use auralis::prelint::{analyze_manifest, build_archetype_song, parse_archetype};
 use auralis::telemetry::analyze_audio;
 use clap::{Parser, Subcommand};
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -19,10 +17,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Scaffold a starter declarative song manifest
+    /// Scaffold a non-generic starter song manifest from an archetype
     Init {
         /// Target JSON manifest path
         path: PathBuf,
+        /// Starter archetype (synthwave, ambient, drill, orchestral, sfx_impact)
+        #[arg(short, long, default_value = "synthwave")]
+        archetype: String,
+        /// Optional tempo override in BPM
+        #[arg(short, long)]
+        tempo: Option<f32>,
+    },
+    /// Run deterministic pre-render intelligence checks on a manifest before compiling
+    Lint {
+        /// Input manifest JSON path
+        manifest: PathBuf,
+        /// Exit with non-zero status if pre-render quality gate fails
+        #[arg(long)]
+        strict: bool,
     },
     /// Compile a declarative song manifest into audio and telemetry
     Compile {
@@ -48,99 +60,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Init { path } => {
-            let song = Song {
-                tempo: 120.0,
-                time_signature: (4, 4),
-                sample_rate: Some(44100),
-                loop_points: Some(LoopPoints {
-                    start_beat: 0.0,
-                    end_beat: Some(4.0),
-                }),
-                master_fx: Vec::new(),
-                patterns: BTreeMap::new(),
-                tracks: vec![
-                    Track {
-                        id: "kick_drum".to_string(),
-                        instrument: InstrumentConfig::Synth {
-                            waveform: Waveform::Sine,
-                            adsr: Adsr {
-                                attack_sec: 0.002,
-                                decay_sec: 0.15,
-                                sustain_level: 0.0,
-                                release_sec: 0.05,
-                            },
-                            pitch_env: Some(PitchEnvelope {
-                                drop_semitones: 36.0,
-                                decay_sec: 0.05,
-                            }),
-                            unison: None,
-                            lfo: None,
-                            fm: None,
-                            filter_env: None,
-                        },
-                        fx: vec![],
-                        clips: Vec::new(),
-                        events: vec![
-                            NoteEvent {
-                                start_beats: 0.0,
-                                duration_beats: 1.0,
-                                midi_note: 36, // C2
-                                velocity: 0.9,
-                                ..Default::default()
-                            },
-                            NoteEvent {
-                                start_beats: 2.0,
-                                duration_beats: 1.0,
-                                midi_note: 36,
-                                velocity: 0.9,
-                                ..Default::default()
-                            },
-                        ],
-                    },
-                    Track {
-                        id: "chords_pad".to_string(),
-                        instrument: InstrumentConfig::Synth {
-                            waveform: Waveform::Triangle,
-                            adsr: Adsr {
-                                attack_sec: 0.2,
-                                decay_sec: 0.3,
-                                sustain_level: 0.7,
-                                release_sec: 0.4,
-                            },
-                            pitch_env: None,
-                            unison: None,
-                            lfo: None,
-                            fm: None,
-                            filter_env: None,
-                        },
-                        fx: vec![],
-                        clips: Vec::new(),
-                        events: vec![
-                            NoteEvent {
-                                start_beats: 0.0,
-                                duration_beats: 2.0,
-                                midi_note: 60,
-                                chord_notes: Some(vec![60, 64, 67]), // C major
-                                velocity: 0.7,
-                                ..Default::default()
-                            },
-                            NoteEvent {
-                                start_beats: 2.0,
-                                duration_beats: 2.0,
-                                midi_note: 57,
-                                chord_notes: Some(vec![57, 60, 64]), // A minor
-                                velocity: 0.7,
-                                ..Default::default()
-                            },
-                        ],
-                    },
-                ],
-            };
-
+        Commands::Init {
+            path,
+            archetype,
+            tempo,
+        } => {
+            let parsed = parse_archetype(Some(&archetype)).map_err(std::io::Error::other)?;
+            let song = build_archetype_song(parsed, tempo);
             let json_str = serde_json::to_string_pretty(&song)?;
             fs::write(&path, json_str)?;
-            println!("Scaffolded song manifest at {}", path.display());
+            println!(
+                "Scaffolded '{}' manifest at {}",
+                parsed.as_str(),
+                path.display()
+            );
+        }
+        Commands::Lint { manifest, strict } => {
+            let content = fs::read_to_string(&manifest)?;
+            let song: Song = serde_json::from_str(&content)?;
+            let audit = analyze_manifest(&song);
+            println!("{}", serde_json::to_string_pretty(&audit)?);
+            if strict && !audit.passed {
+                return Err(format!(
+                    "Pre-render intelligence gate failed (score={}/100, findings={})",
+                    audit.quality_score,
+                    audit.findings.len()
+                )
+                .into());
+            }
         }
         Commands::Compile {
             manifest,
@@ -149,6 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let content = fs::read_to_string(&manifest)?;
             let song: Song = serde_json::from_str(&content)?;
+            let pre_audit = analyze_manifest(&song);
             let (rendered, stem_buffers) = if stems {
                 compile_song_with_stems(&song)
             } else {
@@ -188,6 +136,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 rendered.loop_samples,
             );
             println!("Compiled audio to {}", output.display());
+            println!(
+                "Pre-Lint Score: {}/100 (passed={}, findings={})",
+                pre_audit.quality_score,
+                pre_audit.passed,
+                pre_audit.findings.len()
+            );
             println!(
                 "Auditory Telemetry:\n{}",
                 serde_json::to_string_pretty(&telemetry)?

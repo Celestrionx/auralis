@@ -1,6 +1,7 @@
 pub mod graph;
 pub mod mcp;
 pub mod model;
+pub mod prelint;
 pub mod sampler;
 pub mod soundfont;
 pub mod synth;
@@ -13,6 +14,10 @@ pub use graph::{
 pub use model::{
     Adsr, Clip, FilterEnvelope, FilterSweepMode, FmConfig, FxConfig, InstrumentConfig, LfoConfig,
     LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song, Track, UnisonConfig, Waveform,
+};
+pub use prelint::{
+    Archetype, AuditSeverity, ManifestAudit, PreLintFinding, analyze_manifest,
+    build_archetype_song, parse_archetype,
 };
 pub use telemetry::{
     AudioTelemetry, LoopTelemetry, SectionTelemetry, SpectralEnergy, analyze_audio,
