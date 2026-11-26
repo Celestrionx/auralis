@@ -9,7 +9,7 @@
 </p>
 
 ## For AI Agents
-See [AGENTS.md](AGENTS.md) for crate layout, exact commands, architectural boundaries, and git workflow, [DESIGN.md](DESIGN.md) for invariants, [skills/](skills/) for anti-generic composition & sound-design skills, and [doc/adr/](doc/adr/) for Architecture Decision Records (`ADR-0001` through `ADR-0017`).
+See [AGENTS.md](AGENTS.md) for crate layout, exact commands, architectural boundaries, and git workflow, [DESIGN.md](DESIGN.md) for invariants, [skills/](skills/) for anti-generic composition & sound-design skills, and [doc/adr/](doc/adr/) for Architecture Decision Records (`ADR-0001` through `ADR-0018`).
 
 ## Capabilities (`v0.2.0`)
 - **Declarative Composition**: JSON/YAML `Song` manifests with reusable `Pattern` definitions, track `Clip` scheduling (`repeat`, `transpose_semitones`, `velocity_scale`), chords, portamento (`slide_to_midi`), and seamless `LoopPoints`.
@@ -23,15 +23,41 @@ See [AGENTS.md](AGENTS.md) for crate layout, exact commands, architectural bound
 - **Closed-Loop Auditory Telemetry**: Peak/RMS dBFS, crest factor, stereo correlation, side-to-mid ratio, 32-window Hann FFT spectral energy ratios, time-sliced `sections`, and automated mix `diagnostics`.
 - **MCP Server**: Built-in stdio server exposing `auralis_init_manifest`, `auralis_lint_manifest`, `auralis_compile_audio`, `auralis_inspect_soundfont`, `auralis_eval_wav`, plus `prompts` and `resources` serving all 4 `skills/`.
 
+## Install
+
+### One-Line Binary + Bundled SoundFont (Linux / macOS)
+```bash
+curl -fsSL https://raw.githubusercontent.com/Celestrionx/auralis/main/scripts/install.sh | bash
+```
+
+### From Source (Cargo)
+```bash
+cargo install --git https://github.com/Celestrionx/auralis
+```
+> When running outside the repo root, `auralis` resolves `assets/...` automatically via `AURALIS_SOUNDFONT`, `AURALIS_ASSETS_DIR`, `<exe_dir>/assets`, or `~/.local/share/auralis/assets`.
+
+## MCP Client Setup (Claude / Cursor / Antigravity / OpenCode)
+Add to your MCP config (`~/.config/.../mcp.json` or project `.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "auralis": {
+      "command": "auralis",
+      "args": ["serve"]
+    }
+  }
+}
+```
+Exposes tools (`auralis_init_manifest`, `auralis_lint_manifest`, `auralis_compile_audio`, `auralis_inspect_soundfont`, `auralis_eval_wav`), `prompts`, and `resources` (`auralis://skills/*`).
+
 ## Quick Start
 ```bash
-cargo build --release
-cargo run -- init demo.json --archetype synthwave
-cargo run -- lint demo.json --strict
-cargo run -- compile demo.json -o output.wav --stems
-cargo run -- compile examples/showcase_synthwave.json -o showcase_synthwave.ogg
-cargo run -- eval output.wav
-cargo run -- serve
+auralis init demo.json --archetype synthwave
+auralis lint demo.json --strict
+auralis compile demo.json -o output.wav --stems
+auralis compile examples/showcase_power_metal.json -o power_metal.ogg
+auralis eval output.wav
+auralis serve
 ```
 
 ## Examples

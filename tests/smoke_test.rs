@@ -8,6 +8,7 @@ use auralis::model::{
     LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
 use auralis::prelint::{Archetype, analyze_manifest, build_archetype_song, parse_archetype};
+use auralis::resolve_asset_path;
 use auralis::telemetry::analyze_audio;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -1834,4 +1835,56 @@ fn test_showcase_power_metal_dual_gate_metrics() {
         "Unexpected diagnostics: {:?}",
         telemetry.diagnostics
     );
+}
+
+#[test]
+fn test_portable_asset_resolution_and_missing_asset_lint() {
+    // 1. Existing bundled SF2 resolves cleanly
+    let bundled = "assets/soundfonts/TimGM6mb.sf2";
+    if std::path::Path::new(bundled).exists() {
+        assert!(resolve_asset_path(bundled).exists());
+    }
+
+    // 2. AURALIS_ASSETS_DIR fallback resolves non-CWD relative asset paths
+    let tmp_root = std::env::temp_dir().join("auralis_assets_env_test");
+    let tmp_sub = tmp_root.join("samples");
+    std::fs::create_dir_all(&tmp_sub).expect("create temp assets dir");
+    let dummy_wav = tmp_sub.join("kick_env.wav");
+    std::fs::write(&dummy_wav, b"RIFF").expect("write dummy wav");
+
+    // SAFETY: single-threaded env test in smoke suite; cleaned up immediately after check
+    unsafe {
+        std::env::set_var("AURALIS_ASSETS_DIR", &tmp_root);
+    }
+    let resolved = resolve_asset_path("assets/samples/kick_env.wav");
+    unsafe {
+        std::env::remove_var("AURALIS_ASSETS_DIR");
+    }
+    assert_eq!(resolved, dummy_wav);
+    let _ = std::fs::remove_dir_all(&tmp_root);
+
+    // 3. Pre-lint flags missing SoundFont/Sample assets before rendering
+    let missing_asset_song = Song {
+        tempo: 120.0,
+        tracks: vec![Track {
+            id: "missing_wav_track".to_string(),
+            instrument: InstrumentConfig::Sample {
+                wav_path: "assets/samples/non_existent_999.wav".to_string(),
+                root_midi: 60,
+            },
+            fx: vec![],
+            clips: vec![],
+            events: vec![NoteEvent {
+                start_beats: 0.0,
+                duration_beats: 1.0,
+                midi_note: 60,
+                velocity: 0.85,
+                ..Default::default()
+            }],
+        }],
+        ..Default::default()
+    };
+    let audit = analyze_manifest(&missing_asset_song);
+    let codes: Vec<&str> = audit.findings.iter().map(|f| f.code.as_str()).collect();
+    assert!(codes.contains(&"MISSING_ASSET_FILE"));
 }

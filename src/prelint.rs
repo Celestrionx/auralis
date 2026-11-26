@@ -2,6 +2,7 @@ use crate::model::{
     Adsr, Clip, FilterEnvelope, FilterSweepMode, FmConfig, FxConfig, InstrumentConfig, LfoConfig,
     LoopPoints, NoteEvent, Pattern, PitchEnvelope, Song, Track, UnisonConfig, Waveform,
 };
+use crate::soundfont::resolve_asset_path;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -206,6 +207,38 @@ pub fn analyze_manifest(song: &Song) -> ManifestAudit {
 
         if has_stereo_fx(&track.fx) {
             has_any_stereo_width = true;
+        }
+
+        match &track.instrument {
+            InstrumentConfig::SoundFont { soundfont_path, .. } => {
+                if !resolve_asset_path(soundfont_path).exists() {
+                    findings.push(PreLintFinding {
+                        code: "MISSING_ASSET_FILE".to_string(),
+                        severity: AuditSeverity::Warning,
+                        track_id: Some(track.id.clone()),
+                        message: format!(
+                            "Track '{}' references SoundFont '{}' which was not found.",
+                            track.id, soundfont_path
+                        ),
+                        fix_hint: "Install bundled TimGM6mb.sf2 to ~/.local/share/auralis/assets/soundfonts/ or set AURALIS_SOUNDFONT / AURALIS_ASSETS_DIR.".to_string(),
+                    });
+                }
+            }
+            InstrumentConfig::Sample { wav_path, .. } => {
+                if !resolve_asset_path(wav_path).exists() {
+                    findings.push(PreLintFinding {
+                        code: "MISSING_ASSET_FILE".to_string(),
+                        severity: AuditSeverity::Warning,
+                        track_id: Some(track.id.clone()),
+                        message: format!(
+                            "Track '{}' references WAV sample '{}' which was not found.",
+                            track.id, wav_path
+                        ),
+                        fix_hint: "Verify wav_path relative to working directory or set AURALIS_ASSETS_DIR.".to_string(),
+                    });
+                }
+            }
+            InstrumentConfig::Synth { .. } => {}
         }
     }
 

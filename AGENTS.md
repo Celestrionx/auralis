@@ -13,8 +13,8 @@
   - `model.rs` — declarative AST (`Song`, `Track`, `Pattern`, `Clip`, `NoteEvent`, `InstrumentConfig`, `FxConfig`).
   - `graph.rs` — parallel audio graph compilation, DSP FX chains, `smpl` WAV & OGG Vorbis (`ffmpeg`) export.
   - `synth.rs` — headless tone/percussion generators, unison stereo spread, LFO, 2-op FM, filter/pitch envelopes, ADSR.
-  - `soundfont.rs` — cached SF2 acoustic synthesizer (`rustysynth`) with pitch bend and CC64 damper sustain.
-  - `sampler.rs` — cached WAV one-shot and pitched/glide sample playback instrument.
+  - `soundfont.rs` — cached SF2 synthesizer (`rustysynth`) with portable `resolve_asset_path`, pitch bend, and CC64 damper sustain.
+  - `sampler.rs` — cached WAV one-shot and pitched/glide sample playback using portable asset resolution.
   - `prelint.rs` — deterministic pre-render manifest intelligence (`analyze_manifest`) and non-generic starter archetypes.
   - `telemetry.rs` — auditory telemetry engine (RMS, peak dBFS, crest factor, stereo correlation, 32-window Hann FFT, sections, diagnostics).
   - `mcp.rs` — Model Context Protocol stdio server (`init`, `lint`, `compile`, `inspect_soundfont`, `eval_wav`, plus `prompts`/`resources` exposing `skills/`).
@@ -25,7 +25,8 @@
 - `tests/` — integration and smoke tests:
   - `smoke_test.rs` — audio rendering, DSP, pre-lint, exporter, MCP, and telemetry validation suite.
 - `DESIGN.md` — architectural invariants and non-goals. NOT auto-loaded; read before structural changes.
-- `doc/adr/` — immutable architecture decision records (`ADR-0001`–`ADR-0017`). Append-only, never edit in-place.
+- `doc/adr/` — immutable architecture decision records (`ADR-0001`–`ADR-0018`). Append-only, never edit in-place.
+- `.github/workflows/` & `scripts/install.sh` — CI (`fmt`, `clippy`, `test`), cross-platform release tarballs + SoundFont bundle.
 - `.opencode/` — agent config: permissions, reviewer subagent, start/status commands.
 
 ## Commands (exact; verified)

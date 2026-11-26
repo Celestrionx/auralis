@@ -1,4 +1,5 @@
 use crate::model::NoteEvent;
+use crate::soundfont::resolve_asset_path;
 use hound::{SampleFormat, WavReader};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -15,7 +16,7 @@ static SAMPLE_CACHE: Mutex<Option<HashMap<PathBuf, Arc<LoadedSample>>>> = Mutex:
 pub fn get_or_load_sample<P: AsRef<Path>>(
     path: P,
 ) -> Result<Arc<LoadedSample>, Box<dyn std::error::Error>> {
-    let path_buf = path.as_ref().to_path_buf();
+    let path_buf = resolve_asset_path(path);
     let mut guard = SAMPLE_CACHE.lock().map_err(|e| e.to_string())?;
     let cache = guard.get_or_insert_with(HashMap::new);
 

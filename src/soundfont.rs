@@ -7,10 +7,79 @@ use std::sync::{Arc, Mutex};
 
 static SOUNDFONT_CACHE: Mutex<Option<HashMap<PathBuf, Arc<SoundFont>>>> = Mutex::new(None);
 
+/// Resolves an asset path (`TimGM6mb.sf2` or WAV sample) deterministically across:
+/// 1) exact path / current working directory,
+/// 2) `AURALIS_SOUNDFONT` (for `.sf2`) and `AURALIS_ASSETS_DIR`,
+/// 3) executable-relative directories (`<exe>`, `<exe>/..`, `<exe>/../share/auralis`),
+/// 4) XDG data directory (`$XDG_DATA_HOME/auralis` or `$HOME/.local/share/auralis`).
+pub fn resolve_asset_path<P: AsRef<Path>>(raw: P) -> PathBuf {
+    let raw_path = raw.as_ref();
+    if raw_path.as_os_str().is_empty() || raw_path.exists() {
+        return raw_path.to_path_buf();
+    }
+
+    if raw_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("sf2"))
+        && let Ok(sf_env) = std::env::var("AURALIS_SOUNDFONT")
+    {
+        let candidate = PathBuf::from(sf_env);
+        if candidate.exists() {
+            return candidate;
+        }
+    }
+
+    let stripped = raw_path.strip_prefix("assets").ok();
+    let mut search_roots: Vec<PathBuf> = Vec::new();
+
+    if let Ok(assets_dir) = std::env::var("AURALIS_ASSETS_DIR") {
+        let dir = PathBuf::from(assets_dir);
+        search_roots.push(dir.clone());
+        if let Some(parent) = dir.parent() {
+            search_roots.push(parent.to_path_buf());
+        }
+    }
+
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(exe_dir) = exe.parent()
+    {
+        search_roots.push(exe_dir.to_path_buf());
+        search_roots.push(exe_dir.join("../share/auralis"));
+        if let Some(p1) = exe_dir.parent() {
+            search_roots.push(p1.to_path_buf());
+            if let Some(p2) = p1.parent() {
+                search_roots.push(p2.to_path_buf());
+            }
+        }
+    }
+
+    if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+        search_roots.push(PathBuf::from(xdg_data).join("auralis"));
+    } else if let Ok(home) = std::env::var("HOME") {
+        search_roots.push(PathBuf::from(home).join(".local/share/auralis"));
+    }
+
+    for root in search_roots {
+        let direct = root.join(raw_path);
+        if direct.exists() {
+            return direct;
+        }
+        if let Some(rel) = stripped {
+            let under_assets = root.join(rel);
+            if under_assets.exists() {
+                return under_assets;
+            }
+        }
+    }
+
+    raw_path.to_path_buf()
+}
+
 pub fn get_or_load_soundfont<P: AsRef<Path>>(
     path: P,
 ) -> Result<Arc<SoundFont>, Box<dyn std::error::Error>> {
-    let path_buf = path.as_ref().to_path_buf();
+    let path_buf = resolve_asset_path(path);
     let mut guard = SOUNDFONT_CACHE.lock().map_err(|e| e.to_string())?;
     let cache = guard.get_or_insert_with(HashMap::new);
 

@@ -19,6 +19,7 @@ pub use prelint::{
     Archetype, AuditSeverity, ManifestAudit, PreLintFinding, analyze_manifest,
     build_archetype_song, parse_archetype,
 };
+pub use soundfont::resolve_asset_path;
 pub use telemetry::{
     AudioTelemetry, LoopTelemetry, SectionTelemetry, SpectralEnergy, analyze_audio,
 };
